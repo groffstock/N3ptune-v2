@@ -1,0 +1,3642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N3ptune</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+:root {
+  --bg: #050d1a;
+  --panel: #071120;
+  --panel2: #0a1828;
+  --border: rgba(96,165,250,0.1);
+  --accent: #2563eb;
+  --accent2: #60a5fa;
+  --text: #e8f4ff;
+  --muted: #3d5a7a;
+  --muted2: #6b9ab8;
+  --c-ugs: #f59e0b;
+  --c-gn: #fc2651;
+  --c-seraph: #a855f7;
+  --sidebar-w: 56px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:'Fredoka',sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;overflow:hidden;
+  background-image:
+    linear-gradient(rgba(37,99,235,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,0.04) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+
+/* ═══ ICON SIDEBAR ═══ */
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;
+  width:var(--sidebar-w);
+  background:rgba(5,13,26,0.92);
+  backdrop-filter:blur(16px);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:14px 0;z-index:100;gap:4px;
+}
+.sb-logo{
+  width:40px;height:auto;border-radius:10px;
+  background:transparent;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;margin-bottom:10px;flex-shrink:0;
+  text-decoration:none;
+}
+.sb-divider{width:28px;height:1px;background:var(--border);margin:6px 0;flex-shrink:0}
+.sb-item{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20.7px;cursor:pointer;
+  transition:all .15s;color:var(--muted);
+  position:relative;flex-shrink:0;border:none;background:transparent;
+}
+.sb-item:hover{color:var(--accent2);background:rgba(37,99,235,0.12)}
+.sb-item.active{color:var(--accent2);background:rgba(37,99,235,0.15);box-shadow:inset 0 0 0 1px rgba(37,99,235,0.25)}
+.sb-item-tip{
+  position:absolute;left:calc(100% + 10px);
+  background:rgba(7,17,32,0.95);border:1px solid var(--border);
+  color:var(--text);font-size:12.6px;font-weight:600;
+  padding:4px 10px;border-radius:6px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;
+  backdrop-filter:blur(8px);
+}
+.sb-item:hover .sb-item-tip{opacity:1}
+.sb-spacer{flex:1}
+
+/* ═══ MAIN AREA ═══ */
+.app{
+  position:fixed;
+  top:0;left:var(--sidebar-w);right:0;bottom:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ═══ TOPBAR ═══ */
+.topbar{
+  display:flex;align-items:center;gap:10px;padding:0 20px;height:52px;
+  background:rgba(5,13,26,0.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+  position:relative;z-index:50;
+}
+.page-title{font-size:16.1px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.topbar-right{margin-left:auto;display:flex;gap:7px;align-items:center}
+.save-btn{display:inline-flex;align-items:center;gap:5px;
+  height:30px;background:var(--accent);border:none;border-radius:8px;
+  padding:0 12px;font-family:'Fredoka',sans-serif;font-size:12.6px;font-weight:700;
+  color:#fff;cursor:pointer;transition:background .15s;white-space:nowrap;
+}
+.save-btn:hover{background:#1d4ed8}
+.load-btn{background:rgba(10,24,40,0.7);border:1px solid var(--border);color:var(--muted2)}
+.load-btn:hover{background:var(--panel);color:var(--text)}
+.tsort{
+  height:30px;background:rgba(10,24,40,0.7);border:1px solid var(--border);
+  border-radius:8px;padding:0 9px;font-family:'Fredoka',sans-serif;
+  font-size:12.6px;color:var(--muted2);outline:none;cursor:pointer;
+}
+.tsort option{background:var(--panel)}
+
+/* ═══ PAGES ═══ */
+.page {
+  display: none;       /* Crucial: Completely hides inactive page elements so they can't block clicks */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  flex-direction: column;
+}
+.page.active {
+  display: flex;       /* Only renders the page currently selected */
+}
+
+/* ── HOME PAGE ── */
+.home-page {
+  position: absolute;  /* Lock the container box strictly inside the browser frame */
+  inset: 0;            /* Sets top, left, right, and bottom to 0 simultaneously */
+  overflow-y: auto;    /* Activates internal scrolling only when content overflows */
+  
+  
+  
+}
+/* Radial glow behind title */
+.home-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 90% 70% at 50% 0%, rgba(37,99,235,0.15) 0%, transparent 70%);
+  pointer-events:none;
+}
+/* Floating orbs */
+.hero-orb{
+  position:absolute;border-radius:50%;pointer-events:none;
+  filter:blur(60px);opacity:.18;animation:orbFloat linear infinite;
+}
+@keyframes orbFloat{
+  0%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-24px) scale(1.06)}
+  100%{transform:translateY(0) scale(1)}
+}
+/* Star field canvas */
+#hero-canvas{position:absolute;inset:0;pointer-events:none;opacity:.6}
+
+.home-eyebrow{
+  font-size:12.6px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;
+  color:var(--muted2);margin-bottom:14px;position:relative;
+}
+.home-title{
+  font-size:clamp(44px,7.5vw,82px);font-weight:800;letter-spacing:-.05em;
+  line-height:.95;margin-bottom:8px;position:relative;
+}
+.home-title span.plain{color:var(--text)}
+.home-title span.glow{
+  color:#60a5fa;
+  text-shadow:0 0 40px rgba(37,99,235,0.9),0 0 80px rgba(37,99,235,0.5),0 0 120px rgba(96,165,250,0.25);
+  animation:titlePulse 3s ease-in-out infinite;
+}
+@keyframes titlePulse{
+  0%,100%{text-shadow:0 0 40px rgba(37,99,235,0.9),0 0 80px rgba(37,99,235,0.5),0 0 120px rgba(96,165,250,0.25)}
+  50%{text-shadow:0 0 55px rgba(37,99,235,1),0 0 110px rgba(37,99,235,0.7),0 0 160px rgba(96,165,250,0.35)}
+}
+.home-subtitle{font-size:16.1px;color:var(--muted2);margin-bottom:28px;font-weight:500;position:relative}
+.home-search-wrap{
+  width:100%;max-width:600px;margin:0 auto 20px;position:relative;
+}
+.home-search-input{
+  width:100%;height:56px;
+  background:rgba(10,24,40,0.85);
+  border:1px solid rgba(96,165,250,0.2);
+  border-radius:28px;
+  padding:0 60px 0 56px;
+  font-family:'Fredoka',sans-serif;font-size:17.3px;color:var(--text);
+  outline:none;transition:all .25s;
+}
+.home-search-input::placeholder{color:var(--muted)}
+.home-search-input:focus{
+  border-color:rgba(37,99,235,0.6);
+  box-shadow:0 0 0 4px rgba(37,99,235,0.1),0 12px 40px rgba(0,0,0,0.5);
+  background:rgba(7,17,32,0.98);
+}
+.home-search-icon{
+  position:absolute;left:20px;top:50%;transform:translateY(-50%);
+  color:var(--muted);pointer-events:none;
+}
+.home-search-go{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:40px;height:40px;border-radius:20px;
+  background:var(--accent);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;transition:background .15s;
+}
+.home-search-go:hover{background:#1d4ed8}
+/* Hero CTA row */
+.home-cta-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;position:relative}
+.btn-get-gaming{
+  display:inline-flex;align-items:center;gap:8px;
+  height:46px;padding:0 26px;border-radius:23px;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  border:none;font-family:'Fredoka',sans-serif;font-size:15px;font-weight:700;
+  color:#fff;cursor:pointer;
+  box-shadow:0 0 24px rgba(37,99,235,0.5),0 4px 16px rgba(0,0,0,0.4);
+  transition:all .2s;
+  animation:ctaPulse 3s ease-in-out infinite;
+}
+.btn-get-gaming:hover{
+  background:linear-gradient(135deg,#3b82f6,#2563eb);
+  box-shadow:0 0 36px rgba(37,99,235,0.7),0 8px 24px rgba(0,0,0,0.5);
+  transform:translateY(-2px);
+}
+@keyframes ctaPulse{
+  0%,100%{box-shadow:0 0 24px rgba(37,99,235,0.5),0 4px 16px rgba(0,0,0,0.4)}
+  50%{box-shadow:0 0 40px rgba(37,99,235,0.8),0 4px 16px rgba(0,0,0,0.4)}
+}
+.btn-browse{
+  display:inline-flex;align-items:center;gap:6px;
+  height:46px;padding:0 22px;border-radius:23px;
+  background:rgba(10,24,40,0.7);
+  border:1px solid rgba(96,165,250,0.2);
+  font-family:'Fredoka',sans-serif;font-size:15px;font-weight:700;
+  color:var(--muted2);cursor:pointer;transition:all .2s;
+}
+.btn-browse:hover{color:var(--text);border-color:rgba(37,99,235,.4);background:rgba(37,99,235,.1)}
+.home-stats{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  font-size:12.6px;color:var(--muted);flex-wrap:wrap;position:relative;
+}
+.home-stat{display:flex;align-items:center;gap:5px}
+.home-stat-num{font-weight:700;color:var(--muted2)}
+
+/* Home sections */
+.home-section{margin-bottom:32px}
+.home-sec-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.home-sec-title{
+  font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+}
+.home-sec-dot{width:6px;height:6px;border-radius:50%}
+.home-sec-dot.all{background:var(--accent2)}
+.home-sec-dot.gn{background:var(--c-gn)}
+.home-sec-dot.ugs{background:var(--c-ugs)}
+.home-sec-dot.seraph{background:var(--c-seraph)}
+.home-sec-more{
+  font-size:12.6px;font-weight:600;color:var(--muted2);cursor:pointer;
+  padding:4px 10px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;font-family:'Fredoka',sans-serif;transition:all .13s;
+}
+.home-sec-more:hover{color:var(--text);background:rgba(37,99,235,.1)}
+
+/* Home cards — horizontal scroll row */
+.home-card-row{
+  display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;
+  scrollbar-width:none;
+}
+.home-card-row::-webkit-scrollbar{display:none}
+
+/* Big hero cards */
+.hcard{
+  flex-shrink:0;width:200px;border-radius:14px;overflow:hidden;
+  cursor:pointer;background:var(--panel);
+  border:1px solid var(--border);
+  transition:transform .2s,box-shadow .2s,border-color .2s;
+  position:relative;
+}
+.hcard:hover{transform:translateY(-5px);box-shadow:0 20px 48px rgba(0,0,0,.7);border-color:rgba(37,99,235,.4)}
+.hcard:hover .hcard-play{opacity:1;transform:scale(1)}
+.hcard-thumb{width:100%;height:118px;object-fit:cover;display:block;background:var(--panel2)}
+.hcard-ph{
+  width:100%;height:118px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#071828,#0d2640);font-size:36.8px;
+}
+.hcard-body{padding:9px 11px 11px}
+.hcard-name{font-size:13.8px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.hcard-meta{font-size:10.9px;color:var(--muted2);display:flex;align-items:center;gap:5px}
+.hcard-play{
+  position:absolute;top:8px;right:8px;
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(37,99,235,.92);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:scale(.8);
+  transition:opacity .15s,transform .15s;
+  color:#fff;
+}
+
+/* Source pills on home (bottom section) */
+.home-source-pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.src-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  font-size:13.2px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border);background:rgba(10,24,40,0.6);
+  color:var(--muted2);transition:all .15s;
+}
+.src-pill:hover{color:var(--text);border-color:rgba(96,165,250,0.25)}
+.src-pill.active{color:#fff;border-color:transparent}
+.src-pill.p-gn.active {background:var(--c-gn);color:#fff;box-shadow:0 0 12px rgba(252,38,81,.3)}
+.src-pill.loading{opacity:0.45;cursor:default}
+.src-pill.loading::after{content:' ●';font-size:9.2px;animation:pdot 1.2s infinite}
+.src-pill.p-ugs.active{background:var(--c-ugs);color:#000;box-shadow:0 0 12px rgba(245,158,11,.3)}
+.src-pill.p-seraph.active{background:var(--c-seraph);color:#fff;box-shadow:0 0 12px rgba(168,85,247,.3)}
+.src-pill.p-all.active{background:var(--accent);box-shadow:0 0 12px rgba(37,99,235,.4)}
+.pill-dot{width:7px;height:7px;border-radius:50%}
+.pill-dot.gn{background:var(--c-gn)}.pill-dot.ugs{background:var(--c-ugs)}.pill-dot.all{background:var(--accent2)}.pill-dot.seraph{background:var(--c-seraph)}
+.src-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  font-size:13.2px;font-weight:700;cursor:pointer;
+  border:1px solid var(--border);background:rgba(10,24,40,0.6);
+  color:var(--muted2);transition:all .15s;
+}
+.src-pill:hover{color:var(--text);border-color:rgba(96,165,250,0.25)}
+.src-pill.active{color:#fff;border-color:transparent}
+.src-pill.p-gn.active {background:var(--c-gn);box-shadow:0 0 12px rgba(252,38,81,.3)}
+.src-pill.loading{opacity:0.45;cursor:default}
+.src-pill.loading::after{content:' ●';font-size:9.2px;animation:pdot 1.2s infinite}
+
+.src-pill.p-gn.active {background:var(--c-gn);color:#fff;box-shadow:0 0 12px rgba(252,38,81,.3)}
+.src-pill.p-ugs.active{background:var(--c-ugs);color:#000;box-shadow:0 0 12px rgba(245,158,11,.3)}
+.src-pill.p-seraph.active{background:var(--c-seraph);color:#fff;box-shadow:0 0 12px rgba(168,85,247,.3)}
+.src-pill.p-all.active{background:var(--accent);box-shadow:0 0 12px rgba(37,99,235,.4)}
+.pill-dot{width:7px;height:7px;border-radius:50%}
+
+.pill-dot.gn{background:var(--c-gn)}.pill-dot.ugs{background:var(--c-ugs)}.pill-dot.all{background:var(--accent2)}.pill-dot.seraph{background:var(--c-seraph)}
+
+/* ── GAMES PAGE ── */
+.games-page{overflow:hidden}
+.games-topbar{flex-shrink:0}
+.games-content{padding:16px 22px 48px;flex:1;overflow-y:scroll;min-height:0;}
+
+/* ── SETTINGS PAGE ── */
+.settings-page{
+  padding:0;overflow-y:scroll;
+  align-items:stretch;
+}
+.settings-wrap{max-width:640px;margin:0 auto;padding:36px 28px 60px;width:100%}
+.settings-title{font-size:25.3px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:4px}
+.settings-sub{font-size:13.8px;color:var(--muted2);margin-bottom:32px}
+.s-section{margin-bottom:32px}
+.s-section-title{font-size:11.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.s-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(96,165,250,0.05)}
+.s-row:last-child{border-bottom:none}
+.s-label{font-size:15px;font-weight:600;color:var(--text)}
+.s-desc{font-size:12.6px;color:var(--muted2);margin-top:2px}
+.s-input{
+  flex:1;max-width:260px;height:34px;
+  background:rgba(10,24,40,0.8);border:1px solid var(--border);
+  border-radius:8px;padding:0 10px;
+  font-family:'Fredoka',sans-serif;font-size:13.8px;color:var(--text);
+  outline:none;transition:border-color .15s;
+}
+.s-input:focus{border-color:rgba(37,99,235,.5)}
+.s-btn{
+  height:34px;padding:0 14px;border-radius:8px;
+  background:var(--accent);border:none;
+  font-family:'Fredoka',sans-serif;font-size:12.6px;font-weight:700;color:#fff;
+  cursor:pointer;transition:background .15s;white-space:nowrap;flex-shrink:0;
+}
+.s-btn:hover{background:#1d4ed8}
+.s-btn.ghost{background:rgba(10,24,40,0.7);border:1px solid var(--border);color:var(--muted2)}
+.s-btn.ghost:hover{background:var(--panel);color:var(--text)}
+.s-btn.danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
+.s-btn.danger:hover{background:rgba(239,68,68,.25)}
+/* Theme swatches */
+.theme-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.theme-swatch{
+  width:52px;height:52px;border-radius:10px;cursor:pointer;
+  border:2px solid transparent;transition:all .15s;position:relative;
+  overflow:hidden;
+}
+.theme-swatch.active{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(96,165,250,.3)}
+.theme-swatch:hover{transform:scale(1.08)}
+.theme-swatch span{
+  position:absolute;bottom:0;left:0;right:0;
+  font-size:9.2px;font-weight:700;text-align:center;
+  padding:3px 2px;background:rgba(0,0,0,.5);color:#fff;
+  letter-spacing:.04em;
+}
+/* Wallpaper drop zone */
+.wp-drop{
+  border:2px dashed var(--border);border-radius:12px;
+  padding:20px;text-align:center;cursor:pointer;
+  transition:all .2s;margin-top:8px;
+  font-size:13.8px;color:var(--muted2);
+}
+.wp-drop:hover,.wp-drop.drag-over{border-color:rgba(37,99,235,.5);background:rgba(37,99,235,.05);color:var(--text)}
+.wp-drop svg{display:block;margin:0 auto 8px;opacity:.4}
+.wp-preview{
+  width:100%;height:80px;object-fit:cover;border-radius:8px;
+  margin-top:8px;display:none;border:1px solid var(--border);
+}
+.wp-preview.show{display:block}
+
+/* ═══ STATUS BAR ═══ */
+.status-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap}
+.status-left{font-size:12.1px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#38bdf8;animation:pdot 2s infinite;flex-shrink:0}
+@keyframes pdot{0%,100%{box-shadow:0 0 4px #38bdf8}50%{box-shadow:0 0 10px #38bdf8}}
+.status-right{font-size:12.6px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.src-badge{font-size:9.8px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.06em;text-transform:uppercase}
+.src-badge.gn {background:rgba(252,38,81,.12);border:1px solid rgba(252,38,81,.25);color:#fc8099}
+.src-badge.gn{background:rgba(252,38,81,.12);border:1px solid rgba(252,38,81,.25);color:#fc8099}
+.src-badge.ugs{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.22);color:#fcd34d}
+.src-badge.dm {background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);color:#86efac}
+.src-badge.seraph{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.22);color:#d8b4fe}
+
+/* ═══ FEATURED STRIP ═══ */
+.feat-card{flex-shrink:0;width:165px;border-radius:12px;overflow:hidden;cursor:pointer;border:1px solid var(--border);transition:transform .2s,box-shadow .2s,border-color .2s;background:var(--panel)}
+.feat-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.6);border-color:rgba(37,99,235,.35)}
+.feat-img{width:100%;height:88px;object-fit:cover;display:block;background:var(--panel2)}
+.feat-ph{width:100%;height:88px;display:flex;align-items:center;justify-content:center;background:var(--panel2)}
+.feat-info{padding:7px 9px 8px}
+.feat-name{font-size:12.6px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feat-sub{font-size:9.8px;color:var(--muted2);margin-top:2px;display:flex;align-items:center;gap:4px}
+.feat-row{display:flex;gap:10px;margin-bottom:22px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+.feat-row::-webkit-scrollbar{display:none}
+.sec-label{font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.feat-row{display:flex;gap:10px;margin-bottom:22px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+.feat-row::-webkit-scrollbar{display:none}
+.feat-card{flex-shrink:0;width:172px;border-radius:12px;overflow:hidden;cursor:pointer;border:1px solid var(--border);transition:transform .2s,box-shadow .2s,border-color .2s;background:var(--panel)}
+.feat-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.6);border-color:rgba(37,99,235,.35)}
+.feat-img{width:100%;height:92px;object-fit:cover;display:block;background:var(--panel2)}
+.feat-ph{width:100%;height:92px;display:flex;align-items:center;justify-content:center;font-size:32.2px;background:var(--panel2)}
+.feat-info{padding:7px 9px 8px}
+.feat-name{font-size:12.6px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feat-sub{font-size:9.8px;color:var(--muted2);margin-top:2px;display:flex;align-items:center;gap:4px}
+
+/* ═══ GAME GRID ═══ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:10px;margin-bottom:22px}
+.gcard{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .16s;position:relative}
+.gcard:hover{border-color:rgba(37,99,235,.45);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.5)}
+.gcard:hover .play-btn{opacity:1}
+/* Games whose assets sit on a jsDelivr-blocked account (gn-math, genizy): they
+   can never load, so gray them out. Still clickable — clicking explains why. */
+.gcard.blocked,.feat-card.blocked{filter:grayscale(1);opacity:.42}
+.gcard.blocked:hover,.feat-card.blocked:hover{transform:none;box-shadow:none;border-color:var(--border);opacity:.6}
+.gcard.blocked .play-btn{display:none}
+.gcard.blocked::after,.feat-card.blocked::after{content:'UNAVAILABLE';position:absolute;top:6px;left:6px;z-index:2;padding:2px 6px;border-radius:5px;background:rgba(0,0,0,.72);color:#e5e7eb;font-family:'Fredoka',sans-serif;font-size:9.2px;font-weight:700;letter-spacing:.06em}
+.feat-card.blocked{position:relative}
+.pload.notice .spinner{display:none}
+.pload.notice .ltxt{max-width:440px;line-height:1.55;text-align:center}
+.gcard-img{width:100%;height:88px;object-fit:cover;display:block;background:var(--panel2)}
+.gcard-ph{width:100%;height:88px;display:flex;align-items:center;justify-content:center;font-size:29.9px;background:linear-gradient(135deg,var(--panel2),#0a1e30)}
+.ginfo{padding:7px 9px 8px}
+.gname{font-size:13.2px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.gsub{font-size:10.9px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px}
+.gsrc-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.gsrc-dot.gn{background:var(--c-gn)}.gsrc-dot.ugs{background:var(--c-ugs)}.gsrc-dot.seraph{background:var(--c-seraph)}
+.play-btn{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(37,99,235,.88);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .13s;font-size:11.5px;color:#fff}
+
+/* ═══ PLAYER ═══ */
+/* When closed the player must be fully inert: opacity:0 + pointer-events:none
+   alone still leaves a fixed, full-viewport, z-index:300 layer sitting over the
+   page, which on touch devices can swallow scroll/touch gestures (so the grid
+   "won't scroll" after you exit a game). visibility:hidden takes it out of hit-
+   testing entirely; transitioning visibility keeps the .2s fade intact. */
+.player{position:fixed;inset:0;background:#000;z-index:300;display:flex;flex-direction:column;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s}
+.player.open{opacity:1;visibility:visible;pointer-events:all}
+.phead{display:flex;align-items:center;gap:9px;padding:9px 14px;background:rgba(7,17,32,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);flex-shrink:0}
+.pbk{display:inline-flex;align-items:center;gap:5px;font-size:13.8px;font-weight:600;color:var(--muted2);cursor:pointer;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;font-family:'Fredoka',sans-serif;transition:all .12s}
+.pbk:hover{color:var(--text);border-color:rgba(37,99,235,.35)}
+.ptitle{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+.pacts{margin-left:auto;display:flex;gap:6px;flex-shrink:0}
+.pbtn{display:inline-flex;align-items:center;gap:4px;font-size:12.6px;font-weight:600;padding:5px 11px;border-radius:7px;border:1px solid var(--border);background:rgba(10,24,40,0.7);color:var(--muted2);cursor:pointer;font-family:'Fredoka',sans-serif;transition:all .12s;white-space:nowrap}
+.pbtn:hover{color:var(--text);border-color:rgba(37,99,235,.35)}
+.pbtn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.pbtn.pri:hover{background:#1d4ed8}
+.pframe{flex:1;position:relative;background:#000}
+.pframe iframe{width:100%;height:100%;border:none;display:block}
+.pload{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#050d1a;transition:opacity .3s;z-index:2}
+.pload.gone{opacity:0;pointer-events:none}
+.spinner{width:32px;height:32px;border:3px solid rgba(37,99,235,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{font-size:13.8px;color:var(--muted2)}
+.lsrc{font-size:10.9px;margin-top:-4px;font-weight:700;letter-spacing:.08em}
+.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}
+
+/* ═══ LOADING / EMPTY ═══ */
+.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;gap:14px}
+.loading-state .spinner{width:38px;height:38px}
+.loading-state p{font-size:13.8px;color:var(--muted)}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;gap:10px;text-align:center}
+.emico{display:flex;justify-content:center;margin-bottom:4px}.emtxt{font-size:13.8px;color:var(--muted)}
+
+/* ═══ PLAYER TIP ═══ */
+.ptip{
+  display:flex;align-items:center;gap:6px;
+  font-size:12.1px;font-weight:600;color:var(--muted2);
+  background:rgba(37,99,235,0.07);
+  border:1px solid rgba(37,99,235,0.15);
+  border-radius:8px;padding:4px 10px;
+  white-space:nowrap;flex-shrink:0;
+  animation:tipFadeIn .4s ease both;
+}
+@keyframes tipFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.ptip-icon{font-size:12.6px;flex-shrink:0}
+.ptip b{color:var(--accent2);font-weight:700;cursor:pointer;transition:color .12s}
+.ptip b:hover{color:#fff}
+.ptip-x{
+  margin-left:4px;cursor:pointer;color:var(--muted);
+  font-size:15px;line-height:1;transition:color .12s;flex-shrink:0;
+}
+.ptip-x:hover{color:var(--text)}
+.ptip-text{color:var(--muted2)}
+.ptip-btn{display:inline-flex;align-items:center;gap:4px;font-family:'Fredoka',sans-serif;font-size:11.5px;font-weight:700;
+  color:#fff;background:var(--accent);border:none;border-radius:6px;padding:4px 9px;cursor:pointer;
+  white-space:nowrap;text-decoration:none;transition:background .12s;line-height:1.4}
+.ptip-btn:hover{background:#1d4ed8}
+.ptip-btn.ghost{background:rgba(37,99,235,0.14);color:var(--accent2);border:1px solid rgba(37,99,235,0.3)}
+.ptip-btn.ghost:hover{background:rgba(37,99,235,0.24);color:#fff}
+/* Keep the tip usable on phones (was display:none) — the whole point is that
+   phone users, who can't open devtools, can still Copy logs. Drop the prose,
+   keep the two buttons. */
+@media(max-width:700px){.ptip{padding:4px 6px;gap:5px}.ptip-icon,.ptip-text{display:none}}
+
+/* Copy-logs fallback modal: shown when neither the async Clipboard API nor
+   execCommand('copy') is available (some mobile browsers / insecure origins) —
+   a big selectable textarea so the user can Select-All + Copy by hand. */
+.logcopy-overlay{position:fixed;inset:0;z-index:600;background:rgba(3,8,17,.75);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:20px}
+.logcopy-overlay.open{display:flex}
+.logcopy-modal{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 40px 90px rgba(0,0,0,.7);padding:18px 20px 20px}
+.logcopy-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.logcopy-head b{font-size:17.3px;color:var(--text);font-weight:800}
+.logcopy-x{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:transparent;
+  color:var(--muted2);cursor:pointer;font-size:18.4px;line-height:1}
+.logcopy-x:hover{color:var(--text);background:var(--panel2)}
+.logcopy-sub{font-size:13.2px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+#logCopyText{width:100%;height:200px;resize:vertical;background:var(--bg);color:var(--muted2);
+  border:1px solid var(--border);border-radius:10px;padding:10px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.6px;line-height:1.5;outline:none;box-sizing:border-box}
+.logcopy-actions{display:flex;gap:8px;margin-top:12px}
+.logcopy-actions .ptip-btn{font-size:13.8px;padding:8px 14px}
+
+
+@media(max-width:600px){
+  :root{--sidebar-w:0px}
+  .sidebar{display:none}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+  .home-title{font-size:41.4px}
+}
+
+/* ═══ GAMES TOP SEARCH BAR ═══ */
+.games-topbar{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 22px 12px;
+  background:rgba(5,13,26,0.7);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  z-index:10;
+}
+.games-title{
+  font-size:clamp(18px,3vw,26px);font-weight:800;letter-spacing:-.04em;
+  color:#60a5fa;
+  text-shadow:0 0 20px rgba(37,99,235,0.6);
+  flex-shrink:0;
+  margin-right:4px;
+}
+.games-search-wrap{
+  flex:1;position:relative;
+  display:flex;align-items:center;gap:8px;
+}
+.games-search-input{
+  flex:1;height:40px;
+  background:rgba(10,24,40,0.8);
+  border:1px solid rgba(96,165,250,0.15);
+  border-radius:20px;
+  padding:0 16px 0 40px;
+  font-family:'Fredoka',sans-serif;font-size:15px;color:var(--text);
+  outline:none;transition:all .2s;
+}
+.games-search-input::placeholder{color:var(--muted)}
+.games-search-input:focus{
+  border-color:rgba(37,99,235,0.5);
+  box-shadow:0 0 0 3px rgba(37,99,235,0.08);
+  background:rgba(7,17,32,0.95);
+}
+.games-search-icon{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:var(--muted);pointer-events:none;
+}
+
+/* Source filter mini-bar */
+.src-filter-bar{
+  display:flex;align-items:center;gap:5px;
+  flex-shrink:0;
+}
+.src-filter-btn{
+  display:flex;align-items:center;gap:5px;
+  height:32px;padding:0 10px;border-radius:16px;
+  font-family:'Fredoka',sans-serif;font-size:12.1px;font-weight:700;
+  border:1px solid var(--border);background:rgba(10,24,40,0.6);
+  color:var(--muted2);cursor:pointer;transition:all .15s;white-space:nowrap;
+  letter-spacing:.02em;
+}
+.src-filter-btn:hover{color:var(--text);border-color:rgba(96,165,250,0.3)}
+.src-filter-btn .sf-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;opacity:.5;transition:opacity .15s}
+.src-filter-btn.on .sf-dot{opacity:1}
+.src-filter-btn.on{color:var(--text);border-color:transparent;}
+.src-filter-btn.on.sf-gn{background:rgba(252,38,81,.18);border-color:rgba(252,38,81,.35);color:#fc8099}
+.src-filter-btn.on.sf-ugs{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3);color:#fcd34d}
+.src-filter-btn.on.sf-seraph{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.3);color:#d8b4fe}
+.sf-dot.gn{background:var(--c-gn)}
+.sf-dot.ugs{background:var(--c-ugs)}
+.sf-dot.seraph{background:var(--c-seraph)}
+
+/* ═══ v2 HOME REDESIGN ═══ */
+.home-page{
+  background:
+    radial-gradient(1100px 560px at 50% -8%, rgba(37,99,235,.12), transparent 68%),
+    linear-gradient(rgba(96,165,250,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96,165,250,.035) 1px, transparent 1px),
+    var(--bg);
+  background-size:auto, 44px 44px, 44px 44px, auto;
+}
+/* Only lay out (and thus SHOW) the home page when it's the active page —
+   otherwise this display would override .page{display:none} and the home
+   would sit behind Games/Settings. */
+.home-page.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.home-bg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.7;z-index:0}
+.home-glow{position:absolute;left:50%;top:32%;width:520px;height:520px;transform:translate(-50%,-50%);
+  border-radius:50%;background:radial-gradient(circle, rgba(37,99,235,.16), transparent 66%);
+  filter:blur(22px);pointer-events:none;z-index:0}
+.home-inner{position:relative;z-index:2;width:100%;max-width:660px;padding:44px 24px;
+  display:flex;flex-direction:column;align-items:center;text-align:center}
+.home-brand{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.home-brand .neptlogo svg{filter:drop-shadow(0 6px 20px rgba(20,120,190,.5))}
+.home-word{font-size:39.1px;font-weight:800;letter-spacing:-.03em;color:var(--text);
+  display:flex;align-items:center;gap:10px;line-height:1}
+.home-ver{font-size:16.1px;font-weight:800;color:#fff;background:var(--accent);
+  padding:3px 9px;border-radius:8px;letter-spacing:.01em;
+  box-shadow:0 4px 16px rgba(37,99,235,.5)}
+.home-tag{font-size:15.5px;color:var(--muted2);margin:0 0 30px;font-weight:500}
+
+.pop-strip{width:100%;margin-bottom:26px}
+.pop-label,.recent-label{font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:13px}
+.pop-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.pop-card{width:66px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;
+  transition:transform .16s}
+.pop-card:hover{transform:translateY(-4px)}
+.pop-thumb{width:66px;height:66px;border-radius:16px;object-fit:cover;background:var(--panel2);
+  border:1px solid var(--border);box-shadow:0 8px 20px rgba(0,0,0,.45);
+  transition:border-color .16s,box-shadow .16s}
+.pop-card:hover .pop-thumb{border-color:rgba(96,165,250,.5);box-shadow:0 10px 26px rgba(37,99,235,.35)}
+.pop-name{font-size:10.9px;color:var(--muted2);max-width:66px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;font-weight:600}
+.pop-card.blocked{filter:grayscale(1);opacity:.4;pointer-events:none}
+
+.home-actions{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+.home-actions button{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;
+  border-radius:20px;font-family:'Fredoka',sans-serif;font-size:13.8px;font-weight:700;cursor:pointer;
+  background:rgba(10,24,40,.7);border:1px solid var(--border);color:var(--muted2);transition:all .15s}
+.home-actions button:hover{color:var(--text);border-color:rgba(96,165,250,.4);background:var(--panel)}
+
+.home-recent{margin-top:30px;width:100%}
+.recent-row{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+.recent-chip{font-size:13.2px;font-weight:600;color:var(--muted2);cursor:pointer;
+  padding:7px 13px;border-radius:16px;border:1px solid var(--border);background:rgba(10,24,40,.6);
+  max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s}
+.recent-chip:hover{color:var(--text);border-color:rgba(96,165,250,.4)}
+
+.home-foot{position:relative;z-index:2;display:flex;gap:14px;align-items:center;
+  padding:20px 0 28px;font-size:12.6px;color:var(--muted)}
+.home-foot span{cursor:pointer;transition:color .15s}
+.home-foot span:hover{color:var(--accent2)}
+.home-foot i{color:var(--border);font-style:normal}
+
+/* Changelog modal */
+.cl-overlay{position:fixed;inset:0;z-index:500;background:rgba(3,8,17,.72);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:24px}
+.cl-overlay.open{display:flex}
+.cl-modal{width:100%;max-width:560px;max-height:82vh;overflow:auto;background:var(--panel);
+  border:1px solid var(--border);border-radius:18px;box-shadow:0 40px 90px rgba(0,0,0,.7);padding:24px 28px 28px}
+.cl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.cl-title{font-size:23px;font-weight:800;letter-spacing:-.02em;color:var(--text);
+  display:flex;align-items:center;gap:10px}
+.cl-x{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;
+  color:var(--muted2);cursor:pointer;font-size:19.5px;line-height:1;display:flex;align-items:center;justify-content:center}
+.cl-x:hover{color:var(--text);background:var(--panel2)}
+.cl-sub{font-size:13.8px;color:var(--muted);margin-bottom:18px}
+.cl-entry{padding:16px 0;border-top:1px solid var(--border)}
+.cl-ver{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.cl-tag{font-size:13.8px;font-weight:800;color:#fff;background:var(--accent);padding:2px 9px;border-radius:7px}
+.cl-tag.old{background:var(--panel2);color:var(--muted2);border:1px solid var(--border)}
+.cl-date{font-size:12.6px;color:var(--muted)}
+.cl-entry ul{margin:0;padding-left:18px}
+.cl-entry li{font-size:14.4px;color:var(--muted2);line-height:1.75;margin-bottom:2px}
+.cl-entry li b{color:var(--text);font-weight:700}
+
+/* ═══ BOLDER SITE (chrome only — games stay native) ═══ */
+/* Bolder across the board (parent doc only — never reaches game documents). */
+body{font-weight:600}
+.home-tag,.pop-name,.recent-chip,.gsub,.hcard-meta,.feat-sub,.s-desc,.s-label,
+.home-foot,.cl-entry li,.cl-sub,.ptip,.ptip-text,.status-left,.status-right,
+.sec-label,.src-filter-btn,.sb-item-tip,.settings-sub,.home-actions button,
+.recent-label,.pop-label,.tsort,.s-btn,.theme-swatch{font-weight:700}
+.home-word,.cl-title,.settings-title,.gname,.hcard-name,.feat-name,
+.games-title,.page-title,.ptitle,.s-section-title{font-weight:800}
+
+</style>
+<body>
+
+<!-- ═══ KEY GATE OVERLAY ═══ -->
+<div id="keyGate" style="
+  position:fixed;inset:0;z-index:99999;
+  background:#050d1a;
+  background-image:
+    linear-gradient(rgba(37,99,235,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,0.04) 1px,transparent 1px);
+  background-size:44px 44px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fredoka',sans-serif;
+  
+">
+  <!-- radial glow -->
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 50%,rgba(37,99,235,0.12) 0%,transparent 70%);pointer-events:none"></div>
+
+  <div style="
+    position:relative;
+    background:rgba(7,17,32,0.95);
+    border:1px solid rgba(96,165,250,0.15);
+    border-radius:20px;
+    padding:44px 40px 36px;
+    width:100%;max-width:400px;
+    box-shadow:0 32px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(37,99,235,0.08);
+    text-align:center;
+  ">
+    <!-- Logo / icon -->
+    <div style="
+      width:56px;height:56px;border-radius:16px;
+      background:linear-gradient(135deg,rgba(37,99,235,0.3),rgba(96,165,250,0.15));
+      border:1px solid rgba(96,165,250,0.2);
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 20px;font-size:29.9px;
+    ">🔑</div>
+
+    <div style="font-size:12.6px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:#3d5a7a;margin-bottom:10px">Access Required</div>
+    <h2 style="font-size:29.9px;font-weight:800;letter-spacing:-.04em;color:#e8f4ff;margin-bottom:6px;
+      text-shadow:0 0 40px rgba(37,99,235,0.5);">N3ptune</h2>
+    <p style="font-size:13.8px;color:#6b9ab8;margin-bottom:28px;font-weight:500">Enter your key to continue</p>
+
+    <!-- Input row -->
+    <div style="position:relative;margin-bottom:12px;">
+      <input id="keyInput" type="text" placeholder="Enter key…" autocomplete="off" spellcheck="false"
+        style="
+          width:100%;height:50px;
+          background:rgba(5,13,26,0.8);
+          border:1px solid rgba(96,165,250,0.18);
+          border-radius:12px;
+          padding:0 50px 0 18px;
+          font-family:'Fredoka',sans-serif;font-size:16.1px;font-weight:600;
+          color:#e8f4ff;outline:none;
+          letter-spacing:.04em;
+          transition:border-color .2s,box-shadow .2s;
+          box-sizing:border-box;
+        "
+        onfocus="this.style.borderColor='rgba(37,99,235,0.6)';this.style.boxShadow='0 0 0 4px rgba(37,99,235,0.1)'"
+        onblur="this.style.borderColor='rgba(96,165,250,0.18)';this.style.boxShadow='none'"
+        onkeydown="if(event.key==='Enter')submitKey()"
+      />
+      <button onclick="submitKey()" style="
+        position:absolute;right:7px;top:50%;transform:translateY(-50%);
+        width:36px;height:36px;border-radius:9px;
+        background:var(--accent,#2563eb);border:none;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;
+        color:#fff;font-size:18.4px;transition:background .15s;
+      " onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">→</button>
+    </div>
+
+    <!-- Status message -->
+    <div id="keyMsg" style="min-height:20px;font-size:13.8px;font-weight:600;transition:opacity .2s;opacity:0"></div>
+
+    <!-- Rate limit countdown -->
+    <div id="keyCountdown" style="display:none;margin-top:14px;">
+      <div style="font-size:12.6px;color:#3d5a7a;margin-bottom:6px;font-weight:600">Try again in</div>
+      <div id="keyTimer" style="
+        font-size:32.2px;font-weight:800;letter-spacing:-.04em;
+        color:#60a5fa;
+        text-shadow:0 0 20px rgba(37,99,235,0.6);
+      ">5</div>
+    </div>
+
+    <div style="margin-top:22px;padding-top:18px;border-top:1px solid rgba(96,165,250,0.07);font-size:11.5px;color:#3d5a7a;font-weight:600;letter-spacing:.08em">
+      NO KEY? CONTACT THE PERSON THAT GAVE YOU THIS
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ── Keys: hardcoded test key + GitHub-backed keys ──
+  const REPO = 'groffstock/N3ptune-keysystem';
+  const HARDCODED = {};
+  const _keyFetch = window.fetch.bind(window); // save before main script patches fetch
+
+  let rateLocked = false;
+  let timerInterval = null;
+
+  // Check if already unlocked this session
+  if(sessionStorage.getItem('n3_unlocked') === '1'){
+    document.getElementById('keyGate').style.display = 'none';
+  }
+
+  // Fix: prevent overlay blocking touch scroll after unlock
+  
+
+  // ── Silent jsDelivr cache purge on load ──
+  (async function purgeCache(){
+    const purgeUrl = `https://purge.jsdelivr.net/gh/${REPO}@main/keys.json`;
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position:fixed;bottom:20px;right:20px;z-index:999999;
+      background:rgba(7,17,32,0.97);border:1px solid rgba(96,165,250,0.2);
+      border-radius:10px;padding:10px 16px;
+      font-family:'Fredoka',sans-serif;font-size:12.6px;font-weight:700;
+      color:#6b9ab8;letter-spacing:.04em;
+      box-shadow:0 8px 32px rgba(0,0,0,0.5);
+      opacity:0;transition:opacity .3s;pointer-events:none;
+      max-width:280px;line-height:1.5;
+    `;
+    document.body.appendChild(toast);
+
+    function showToast(text, color, duration){
+      toast.innerHTML = text;
+      toast.style.color = color;
+      toast.style.opacity = '1';
+      setTimeout(()=>{ toast.style.opacity = '0'; }, duration);
+    }
+
+    try {
+      const res = await fetch(purgeUrl);
+      const data = await res.json();
+      if(data.status === 'finished'){
+        showToast('✅ Cache Purged!', '#4ade80', 3000);
+      } else {
+        const reason = data.description || data.status || 'Unknown reason';
+        showToast(`⚠️ Cache Purge Failed.<br><span style="color:#f87171;font-weight:600">Reason: ${reason}</span>`, '#fcd34d', 5000);
+      }
+    } catch(e) {
+      showToast(`❌ Cache Purge Failed.<br><span style="color:#f87171;font-weight:600">Reason: ${e.message}</span>`, '#fcd34d', 5000);
+    }
+  })();
+
+  async function fetchGitHubKeys() {
+    try {
+      const mirrors = ['cdn.jsdelivr.net','fastly.jsdelivr.net','gcore.jsdelivr.net','quantil.jsdelivr.net','testingcf.jsdelivr.net','originfastly.jsdelivr.net','cdn.staticdelivr.com'];
+      for (const m of mirrors) {
+        try {
+          // staticdelivr uses /branch/ instead of @branch
+          const kPath = m === 'cdn.staticdelivr.com'
+            ? `https://${m}/gh/${REPO}/main/keys.json`
+            : `https://${m}/gh/${REPO}@main/keys.json`;
+          const r = await _keyFetch(kPath + '?t=' + Date.now(), { signal: AbortSignal.timeout(5000) });
+          if (r.ok) return await r.json();
+        } catch(e) {}
+      }
+      return null; // all mirrors failed, don't log out
+    } catch(e) { return null; }
+  }
+
+  // ── Periodic key revalidation ──
+  async function recheckKey() {
+    if(sessionStorage.getItem('n3_unlocked') !== '1') return;
+    const storedKey = sessionStorage.getItem('n3_key');
+    if(!storedKey) return;
+    const ghKeys = await fetchGitHubKeys();
+    if(ghKeys === null) return; // fetch failed, don't log out — give benefit of doubt
+    const validKeys = new Set();
+    Object.keys(HARDCODED).forEach(k => validKeys.add(k.toUpperCase()));
+    const ghList = Array.isArray(ghKeys) ? ghKeys : Object.keys(ghKeys);
+    ghList.forEach(k => validKeys.add(String(k).toUpperCase()));
+    if(!validKeys.has(storedKey)) {
+      // Key no longer valid — silent logout
+      sessionStorage.removeItem('n3_unlocked');
+      sessionStorage.removeItem('n3_key');
+      const gate = document.getElementById('keyGate');
+      gate.style.display = 'flex';
+      gate.style.opacity = '0';
+      gate.style.transition = 'opacity 0.5s';
+      setTimeout(() => { gate.style.opacity = '1'; }, 10);
+      document.getElementById('keyMsg').textContent = '🔑 Your key has been revoked.';
+      document.getElementById('keyMsg').style.color = '#f87171';
+      document.getElementById('keyMsg').style.opacity = '1';
+    }
+  }
+
+  // Check every 60 seconds
+  setInterval(recheckKey, 60000);
+  // Also check immediately on load if already unlocked
+  if(sessionStorage.getItem('n3_unlocked') === '1') recheckKey();
+
+  window.submitKey = async function() {
+    if(rateLocked) return;
+    const input = document.getElementById('keyInput');
+    const msg = document.getElementById('keyMsg');
+    const key = input.value.trim().toUpperCase();
+
+    if(!key){ showMsg('Please enter a key.', '#6b9ab8'); return; }
+
+    showMsg('Checking…', '#6b9ab8');
+
+    // Check hardcoded keys first, then GitHub
+    let validKeys = new Set(Object.keys(HARDCODED).map(k => k.toUpperCase()));
+    try {
+      const ghKeys = await fetchGitHubKeys();
+      // Support both array ["KEY1","KEY2"] and object {"KEY1":...} formats
+      const ghList = Array.isArray(ghKeys) ? ghKeys : Object.keys(ghKeys);
+      ghList.forEach(k => validKeys.add(String(k).toUpperCase()));
+    } catch(e) {}
+
+    if(!validKeys.has(key)){
+      showMsg('❌ Invalid key.', '#f87171');
+      startRateLimit();
+      return;
+    }
+
+    // ✅ Valid
+    showMsg('✅ Access granted!', '#4ade80');
+    sessionStorage.setItem('n3_unlocked', '1');
+    sessionStorage.setItem('n3_key', key);
+    setTimeout(()=>{
+      const gate = document.getElementById('keyGate');
+      gate.style.transition = 'opacity 0.5s';
+      gate.style.opacity = '0';
+      setTimeout(()=>{ gate.style.display='none'; }, 500);
+    }, 600);
+  };
+
+  function showMsg(text, color){
+    const msg = document.getElementById('keyMsg');
+    msg.textContent = text;
+    msg.style.color = color;
+    msg.style.opacity = '1';
+  }
+
+  function startRateLimit(){
+    rateLocked = true;
+    const input = document.getElementById('keyInput');
+    const countdown = document.getElementById('keyCountdown');
+    const timerEl = document.getElementById('keyTimer');
+    input.disabled = true;
+    input.style.opacity = '0.4';
+    countdown.style.display = 'block';
+    let secs = 5;
+    timerEl.textContent = secs;
+    timerInterval = setInterval(()=>{
+      secs--;
+      timerEl.textContent = secs;
+      if(secs <= 0){
+        clearInterval(timerInterval);
+        rateLocked = false;
+        input.disabled = false;
+        input.style.opacity = '1';
+        input.value = '';
+        countdown.style.display = 'none';
+        document.getElementById('keyMsg').style.opacity = '0';
+        input.focus();
+      }
+    }, 1000);
+  }
+})();
+</script>
+
+
+<!-- ICON SIDEBAR -->
+<nav class="sidebar">
+  <div class="sb-logo" onclick="showPage('home')"><span class="neptlogo" data-size="30"></span></div>
+
+  <div class="sb-item active" id="sb-home" onclick="showPage('home')">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.1L1 12h3v9h6v-6h4v6h6v-9h3L12 2.1z"/></svg>
+    <span class="sb-item-tip">Home</span>
+  </div>
+  <div class="sb-item" id="sb-games" onclick="showPage('games')">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6H3a1 1 0 00-1 1v10a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zm-11 8H8v2H6v-2H4v-2h2v-2h2v2h2v2zm4-1a1 1 0 110-2 1 1 0 010 2zm3 2a1 1 0 110-2 1 1 0 010 2z"/></svg>
+    <span class="sb-item-tip">Games</span>
+  </div>
+  <div class="sb-item" id="sb-settings" onclick="showPage('settings')">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+    <span class="sb-item-tip">Settings</span>
+  </div>
+  <div class="sb-item" id="sb-changelog" onclick="openChangelog()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 3h16a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zm3 5v2h10V8H7zm0 4v2h10v-2H7zm0 4v2h7v-2H7z"/></svg>
+    <span class="sb-item-tip">Changelog</span>
+  </div>
+
+  <div class="sb-divider"></div>
+  <div class="sb-spacer"></div>
+</nav>
+
+<!-- MAIN APP -->
+<div class="app">
+
+  <!-- TOPBAR (hidden on home) -->
+  <div class="topbar" id="topbar" style="display:none">
+    <span class="page-title" id="page-title">Games</span>
+    <div class="topbar-right">
+      <button class="save-btn" onclick="saveData()" title="Save progress"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zm2 16H5V5h11.17L19 7.83V19zm-7-7a3 3 0 100 6 3 3 0 000-6zm-5-5h8v4H7V7z"/></svg> Save</button>
+      <button class="save-btn load-btn" onclick="loadData()" title="Load save"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5v-2z"/></svg> Load</button>
+      <select class="tsort" id="sortSelect" style="display:none">
+        <option value="default">Default</option>
+        <option value="name">Name A–Z</option>
+        <option value="popular">Most Played</option>
+        <option value="trendingMonth">Trending Month</option>
+        <option value="trendingWeek">Trending Week</option>
+        <option value="trendingDay">Trending Day</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- HOME PAGE -->
+  <div class="page home-page active" id="page-home">
+    <canvas id="hero-canvas" class="home-bg"></canvas>
+    <div class="home-glow"></div>
+    <div class="home-inner">
+      <div class="home-brand">
+        <span class="neptlogo" data-size="46"></span>
+        <span class="home-word">N3ptune<span class="home-ver">v2</span></span>
+      </div>
+      <p class="home-tag">Play anything. Always free, always unblocked.</p>
+
+      <div class="pop-strip">
+        <div class="pop-label">Popular now</div>
+        <div class="pop-row" id="popular-row"></div>
+      </div>
+
+      <div class="home-search-wrap">
+        <span class="home-search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span>
+        <input class="home-search-input" id="homeSearch" type="text" placeholder="Search games&#8230;" autocomplete="off" spellcheck="false">
+        <button class="home-search-go" onclick="doHomeSearch()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+      </div>
+
+      <div class="home-actions">
+        <button onclick="showPage('games')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>All games</button>
+        <button onclick="launchRandom()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm3 4a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm8 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-4 4a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-4 4a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm8 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>Surprise me</button>
+      </div>
+
+      <div class="home-recent" id="home-recent"></div>
+    </div>
+
+    <div class="home-foot">
+      <span onclick="openChangelog()">changelog</span>
+      <i>&#183;</i>
+      <span onclick="showPage('settings')">settings</span>
+      <i>&#183;</i>
+      <span id="foot-count">&#8212; games</span>
+    </div>
+  </div>
+
+  <!-- GAMES PAGE -->
+  <div class="page games-page" id="page-games">
+    <div class="games-topbar">
+      <span class="games-title" style="display:flex;align-items:center;gap:8px"><span class="neptlogo" data-size="24"></span>N3ptune</span>
+      <div class="games-search-wrap">
+        <span class="games-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span>
+        <input class="games-search-input" id="gamesSearch" type="text"
+          placeholder="Search games..." autocomplete="off" spellcheck="false">
+      </div>
+      <div class="src-filter-bar">
+        <button class="src-filter-btn sf-gn on" id="sfbtn-gn" onclick="toggleSrc('gn')">
+          <span class="sf-dot gn"></span>GN-Math
+        </button>
+        <button class="src-filter-btn sf-ugs on" id="sfbtn-ugs" onclick="toggleSrc('ugs')">
+          <span class="sf-dot ugs"></span>UGS
+        </button>
+        <button class="src-filter-btn sf-seraph on" id="sfbtn-seraph" onclick="toggleSrc('seraph')">
+          <span class="sf-dot seraph"></span>Seraph
+        </button>
+      </div>
+    </div>
+    <div class="games-content" id="games-content">
+      <div class="loading-state"><div class="spinner"></div><p>Loading games...</p></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PAGE -->
+  <div class="page settings-page" id="page-settings">
+    <div class="settings-wrap">
+      <div class="settings-title">Settings</div>
+      <div class="settings-sub">Customize your N3ptune experience</div>
+
+      <!-- CDN -->
+      <div class="s-section">
+        <div class="s-section-title">CDN</div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Mirror</div>
+            <div class="s-desc">Choose which jsdelivr mirror to use for loading games</div>
+          </div>
+          <div style="display:flex;gap:6px;flex:1;max-width:280px">
+            <select class="s-input" id="cdnSelect" onchange="setCdnManual(this.value)" style="flex:1"></select>
+            <button class="s-btn" onclick="testAllCdns()">Test</button>
+          </div>
+        </div>
+        <div id="cdnTestResults" style="margin-top:10px;font-size:12.6px;color:var(--muted);line-height:1.9"></div>
+      </div>
+
+      <!-- THEME -->
+      <div class="s-section">
+        <div class="s-section-title">Theme</div>
+        <div class="theme-grid" id="themeGrid"></div>
+      </div>
+
+      <!-- WALLPAPER -->
+      <div class="s-section">
+        <div class="s-section-title">Wallpaper</div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Image URL</div>
+            <div class="s-desc">Paste a direct link to an image</div>
+          </div>
+          <div style="display:flex;gap:6px;flex:1;max-width:280px">
+            <input class="s-input" id="wpUrl" type="text" placeholder="https://...">
+            <button class="s-btn" onclick="applyWallpaperUrl()">Apply</button>
+          </div>
+        </div>
+        <div class="wp-drop" id="wpDrop">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Drag & drop an image, or <strong style="color:var(--accent2);cursor:pointer" onclick="document.getElementById('wpFile').click()">browse</strong>
+        </div>
+        <input type="file" id="wpFile" accept="image/*" style="display:none" onchange="handleWallpaperFile(this)">
+        <img class="wp-preview" id="wpPreview">
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="s-btn ghost" onclick="clearWallpaper()">Remove Wallpaper</button>
+        </div>
+      </div>
+
+      <!-- TAB CLOAK -->
+      <div class="s-section">
+        <div class="s-section-title">Tab Cloak</div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Tab Title</div>
+            <div class="s-desc">Change what appears in the browser tab</div>
+          </div>
+          <div style="display:flex;gap:6px;flex:1;max-width:280px">
+            <input class="s-input" id="cloakTitle" type="text" placeholder="e.g. Google Classroom">
+            <button class="s-btn" onclick="applyCloak()">Apply</button>
+          </div>
+        </div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Tab Icon URL</div>
+            <div class="s-desc">URL to a .ico or .png favicon</div>
+          </div>
+          <div style="display:flex;gap:6px;flex:1;max-width:280px">
+            <input class="s-input" id="cloakIcon" type="text" placeholder="https://...favicon.ico">
+            <button class="s-btn" onclick="applyCloak()">Apply</button>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <button class="s-btn ghost" onclick="resetCloak()">Reset to Default</button>
+        </div>
+      </div>
+
+      <!-- N3PT PANIC -->
+      <div class="s-section">
+        <div class="s-section-title">N3ptPanic</div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Panic URL</div>
+            <div class="s-desc">Website to show when panic key is pressed</div>
+          </div>
+          <div style="display:flex;gap:6px;flex:1;max-width:280px">
+            <input class="s-input" id="panicUrl" type="text" placeholder="https://classroom.google.com">
+            <button class="s-btn" onclick="savePanic()">Save</button>
+          </div>
+        </div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Panic Key</div>
+            <div class="s-desc">Key or combo to toggle panic overlay (e.g. Escape, ctrl+shift+x)</div>
+          </div>
+          <div style="display:flex;gap:6px;flex:1;max-width:280px">
+            <input class="s-input" id="panicKey" type="text" placeholder="Click &amp; press a key..." readonly
+              onfocus="startPanicCapture(this)" onblur="stopPanicCapture(this)">
+            <button class="s-btn ghost" onclick="clearPanic()">Clear</button>
+          </div>
+        </div>
+        <div style="margin-top:6px">
+          <span id="panicStatus" style="font-size:12.6px;color:var(--muted)"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /.app -->
+
+
+
+<!-- CHANGELOG -->
+<div class="cl-overlay" id="changelogOverlay" onclick="if(event.target===this)closeChangelog()">
+  <div class="cl-modal">
+    <div class="cl-head">
+      <div class="cl-title"><span class="neptlogo" data-size="26"></span>Changelog</div>
+      <button class="cl-x" onclick="closeChangelog()">&#215;</button>
+    </div>
+    <div class="cl-sub">What&#39;s new in N3ptune.</div>
+
+    <div class="cl-entry">
+      <div class="cl-ver"><span class="cl-tag">v2.1</span><span class="cl-date">Jul 24, 2026</span></div>
+      <ul>
+        <li><b>Brand-new home page</b> &#8212; cleaner layout, a smaller refined Neptune logo, and popular games you can jump straight into.</li>
+        <li>Games whose files live on a blocked CDN (gn-math) now <b>gray out with an explanation</b> instead of showing a black screen.</li>
+        <li>The popular row only shows working games &#8212; never blocked ones.</li>
+      </ul>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-ver"><span class="cl-tag">v2.0</span><span class="cl-date">Jul 2026</span></div>
+      <ul>
+        <li>Rebuilt as <b>N3ptune v2</b> &#8212; one self-contained page, no downloads.</li>
+        <li>Game lists now load <b>live</b> (nothing hardcoded) and cache for a day, so new games appear automatically.</li>
+        <li>Added the <b>UGS</b> source over GitLab &#8212; hundreds more games.</li>
+        <li>Live CDN mirror picking for faster loads.</li>
+      </ul>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-ver"><span class="cl-tag old">v1.x</span><span class="cl-date">earlier</span></div>
+      <ul>
+        <li>Games launch in a sandboxed frame, fixing the &#8220;raw code&#8221; bug.</li>
+        <li>Killed a wave of black screens: <b>Unity</b>, YouTube Playables, own-<code>base</code> games, renamed assets, and blocked-account libraries rerouted to npm.</li>
+        <li>Games and their audio now fully stop when you hit <b>Back</b>.</li>
+        <li>Themes, wallpapers, tab cloak, and save / load.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER -->
+<div class="player" id="player">
+  <div class="phead">
+    <button class="pbk" onclick="closeGame()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg> Back</button>
+    <span class="ptitle" id="ptitle">&#8212;</span>
+    <div class="ptip" id="ptip">
+      <span class="ptip-icon">💡</span>
+      <span class="ptip-text">Game not working? Copy the logs &amp; send them to our form:</span>
+      <button class="ptip-btn ghost" onclick="copyGameLogs(this)">Copy logs</button>
+      <a class="ptip-btn" href="https://forms.gle/DbvmVCxWjzJyojGB7" target="_blank" rel="noopener">Open form</a>
+      <span class="ptip-x" onclick="document.getElementById('ptip').style.display='none'" title="Dismiss">×</span>
+    </div>
+    <div class="pacts">
+      <button class="pbtn" onclick="reloadGame()"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> Reload</button>
+      <button class="pbtn" id="newTabBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg> New Tab</button>
+      <button class="pbtn pri" onclick="fsGame()"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> Fullscreen</button>
+    </div>
+  </div>
+  <div class="pframe">
+    <div class="pload" id="pload">
+      <div class="spinner"></div>
+      <div class="ltxt" id="ltxt">Loading...</div>
+      <div class="lsrc" id="lsrc"></div>
+      <button id="showAnywayBtn" onclick="showGameAnyway()" style="display:none;margin-top:14px;padding:8px 18px;background:rgba(37,99,235,0.18);border:1px solid rgba(37,99,235,0.35);color:var(--accent2);border-radius:8px;font-family:'Fredoka',sans-serif;font-size:13.2px;font-weight:700;cursor:pointer;letter-spacing:.04em;">Show Game Anyway</button>
+    </div>
+    <iframe id="gframe" allow="fullscreen;autoplay;pointer-lock;clipboard-write" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CDN MIRROR RESOLVER — availability + speed ranked
+//  1. Pings all mirrors in parallel
+//  2. Drops blocked ones
+//  3. Picks fastest responding unblocked one
+//  All fetch() calls and game HTML are transparently patched.
+// ═══════════════════════════════════════════════════════════
+const CDN_MIRRORS = [
+  'cdn.jsdelivr.net',
+  'fastly.jsdelivr.net',
+  'gcore.jsdelivr.net',
+  'quantil.jsdelivr.net',
+  'testingcf.jsdelivr.net',
+  'originfastly.jsdelivr.net',
+];
+const CDN_MIRRORS_ALL = [...CDN_MIRRORS, 'cdn.staticdelivr.com'];
+const CDN_TEST_PATH = '/gh/freebuisness/assets@main/zones.json';
+const ALL_CDN_HOSTS = /(\/\/)([a-z]+\.jsdelivr\.net)/g;
+
+let _cdnHost = CDN_MIRRORS[0];
+let _cdnResolved = false;
+let _cdnResolving = null;
+
+function cdnUrl(url) {
+  if (!url) return url;
+  return _swapMirror(url, _cdnHost);
+}
+
+function patchHtml(html) {
+  // Replace ALL jsdelivr/staticdelivr host references in fetched game HTML
+  // with the resolved fastest mirror. This covers src, href, url(), fetch() etc.
+  if (!html) return html;
+  if (_cdnHost === 'cdn.jsdelivr.net') return html; // default mirror, no swap needed
+  if (_cdnHost === 'cdn.staticdelivr.com') {
+    return html
+      .replace(/https?:\/\/[a-z.]+(?:jsdelivr\.net|staticdelivr\.com)/g, 'https://cdn.staticdelivr.com')
+      .replace(/(\/gh\/[^\/'"<>\s]+\/[^@'"<>\s]+)@/g, '$1/');
+  }
+  // Any other jsdelivr mirror: just swap the hostname
+  return html.replace(/https?:\/\/[a-z.]+(?:jsdelivr\.net|staticdelivr\.com)/g, 'https://' + _cdnHost);
+}
+
+function _mirrorTestUrl(mirror) {
+  return `https://${mirror}${CDN_TEST_PATH}`;
+}
+
+function _swapMirror(url, mirror) {
+  if (!url) return url;
+  if (mirror === 'cdn.staticdelivr.com') {
+    // staticdelivr uses /gh/user/repo/branch/file (@ replaced with /)
+    return url
+      .replace(/\/\/[a-z.]+(?:jsdelivr\.net|staticdelivr\.com)/, '//cdn.staticdelivr.com')
+      .replace(/(\/gh\/[^@/]+\/[^@/]+)@/, '$1/');
+  }
+  const swapped = url.replace(/\/\/[a-z.]+(?:jsdelivr\.net|staticdelivr\.com)/, '//' + mirror);
+  // Only restore @ when the version separator is actually missing (a staticdelivr-style
+  // /gh/user/repo/branch/file path). Running this unconditionally turned
+  // .../html@main/0.html into .../html@main@0.html, which jsDelivr rejects with
+  // "Invalid URL. The URL structure is /gh/user/repo@version/file.js".
+  if (/\/gh\/[^@/]+\/[^/]+@/.test(swapped)) return swapped;
+  return swapped.replace(/(\/gh\/[^/]+\/[^/]+)\/([^/])/, '$1@$2');
+}
+
+async function _pingMirror(mirror) {
+  const t0 = Date.now();
+  try {
+    const r = await fetch(_mirrorTestUrl(mirror), {
+      method: 'HEAD', cache: 'no-store',
+      signal: AbortSignal.timeout(5000)
+    });
+    if (r.ok || r.status === 304 || r.status === 200) {
+      return { mirror, ms: Date.now() - t0, ok: true };
+    }
+    return { mirror, ok: false };
+  } catch(e) {
+    return { mirror, ok: false };
+  }
+}
+
+// Cached zones.json text from the fastest mirror — reused by loadGN() so we don't fetch twice
+let _cdnZonesText = null;
+
+async function resolveCdn() {
+  if (_cdnResolved) return _cdnHost;
+  if (_cdnResolving) return _cdnResolving;
+  _cdnResolving = (async () => {
+    // Check if user manually picked a CDN
+    const saved = localStorage.getItem('n3_cdn');
+    if (saved && CDN_MIRRORS_ALL.includes(saved)) {
+      _cdnHost = saved;
+      _cdnResolved = true;
+      console.log('[N3ptune] CDN (manual):', saved);
+      return _cdnHost;
+    }
+    // Ping mirrors in parallel — test both availability AND a real file fetch.
+    // Rank only jsDelivr mirrors (NOT staticdelivr): _cdnHost becomes the game
+    // <base>, and staticdelivr 301s .wasm, so a staticdelivr base breaks Ruffle/
+    // Unity/Godot games. staticdelivr stays available as a manual override only.
+    // IMPORTANT: save the response body so loadGN() can reuse it without a second fetch
+    const results = await Promise.all(CDN_MIRRORS.map(async mirror => {
+      const t0 = Date.now();
+      try {
+        const testUrl = `https://${mirror}/gh/freebuisness/assets@main/zones.json`;
+        const r = await _origFetch(testUrl, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+        if (r.ok) {
+          const text = await r.text();
+          if (text && text.length > 10) {
+            return { mirror, ms: Date.now() - t0, ok: true, text };
+          }
+        }
+        return { mirror, ok: false };
+      } catch(e) {
+        return { mirror, ok: false };
+      }
+    }));
+    const working = results.filter(r => r.ok).sort((a, b) => a.ms - b.ms);
+    if (working.length) {
+      _cdnHost = working[0].mirror;
+      // Cache the zones.json text from the fastest mirror so loadGN() doesn't re-fetch
+      _cdnZonesText = working[0].text;
+      console.log('[N3ptune] CDN ranking:', working.map(r => `${r.mirror} ${r.ms}ms`).join(', '));
+    } else {
+      console.warn('[N3ptune] All CDN mirrors failed, using default');
+    }
+    _cdnResolved = true;
+    return _cdnHost;
+  })();
+  return _cdnResolving;
+}
+
+// Manual CDN override from settings
+function setCdnManual(mirror) {
+  if (!mirror) return;
+  localStorage.setItem('n3_cdn', mirror);
+  _cdnHost = mirror;
+  _cdnResolved = true;
+  _cdnResolving = null;
+  // Reload GN and UGS with new CDN
+  GN_COVER = `https://${mirror}/gh/freebuisness/covers@main`;
+  GN_HTML  = `https://${mirror}/gh/freebuisness/html@main`;
+  Promise.allSettled([loadUGS(), loadGN()]).then(() => { render(); renderHome(); });
+  showN3Toast('CDN set to ' + mirror);
+}
+
+async function testAllCdns() {
+  const resultsEl = document.getElementById('cdnTestResults');
+  if (!resultsEl) return;
+  resultsEl.textContent = 'Testing all mirrors...';
+  const results = await Promise.all(CDN_MIRRORS_ALL.map(async mirror => {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(`https://${mirror}/gh/freebuisness/assets@main/zones.json`, {
+        cache: 'no-store', signal: AbortSignal.timeout(6000)
+      });
+      if (r.ok) {
+        const text = await r.text();
+        if (text && text.length > 10) return { mirror, ms: Date.now()-t0, ok: true };
+      }
+      return { mirror, ok: false };
+    } catch(e) { return { mirror, ok: false }; }
+  }));
+  results.sort((a,b) => {
+    if (a.ok && !b.ok) return -1;
+    if (!a.ok && b.ok) return 1;
+    return a.ms - b.ms;
+  });
+  resultsEl.innerHTML = results.map(r => {
+    const active = r.mirror === _cdnHost ? ' <strong style="color:var(--accent2)">(active)</strong>' : '';
+    return r.ok
+      ? `<span style="color:#4ade80">✓</span> <a href="#" onclick="setCdnManual('${r.mirror}');buildCdnSelect();return false;" style="color:var(--text)">${r.mirror}</a> — ${r.ms}ms${active}`
+      : `<span style="color:#f87171">✗</span> <span style="color:var(--muted)">${r.mirror} — blocked</span>`;
+  }).join('<br>');
+}
+
+function buildCdnSelect() {
+  const sel = document.getElementById('cdnSelect');
+  if (!sel) return;
+  sel.innerHTML = CDN_MIRRORS_ALL.map(m =>
+    `<option value="${m}"${m === _cdnHost ? ' selected' : ''}>${m}</option>`
+  ).join('');
+}
+
+// Patch global fetch to transparently swap any jsdelivr host with the fastest
+const _origFetch = window.fetch.bind(window);
+window.fetch = function(input, init) {
+  if (typeof input === 'string' && input.includes('jsdelivr.net')) {
+    input = cdnUrl(input);
+  } else if (input instanceof Request && input.url.includes('jsdelivr.net')) {
+    input = new Request(cdnUrl(input.url), input);
+  }
+  return _origFetch(input, init);
+};
+
+// Start resolving immediately in background
+resolveCdn();
+
+const _IC_GAMEPAD = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="opacity:.2"><path d="M21 6H3a1 1 0 00-1 1v10a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zm-11 8H8v2H6v-2H4v-2h2v-2h2v2h2v2zm4-1a1 1 0 110-2 1 1 0 010 2zm3 2a1 1 0 110-2 1 1 0 010 2z"/></svg>';
+const _IC_PLAY    = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
+
+
+// ── UGS / GITLAB (Hydra-Network) ──────────────────────────
+// UGS games now live on GitLab at Hydra.Network/game-assets/hydra-assets.
+// GitLab's plain /-/raw/ endpoint has NO CORS header and serves every file as
+// text/plain;nosniff (so relative <script>/<link> get blocked and heavy games
+// can't XHR their data). The API v4 "files/.../raw" endpoint DOES send
+// Access-Control-Allow-Origin:*, so we route every file fetch through it and
+// hand the iframe blobs with correct MIME types. See loadGitlabGame().
+const GL_PROJECT = '83614521'; // Hydra.Network/game-assets/hydra-assets
+const GL_REF     = 'main';
+const GL_RAWROOT = 'https://gitlab.com/Hydra.Network/game-assets/hydra-assets/-/raw/' + GL_REF + '/';
+const GL_APIROOT = 'https://gitlab.com/api/v4/projects/' + GL_PROJECT + '/repository/';
+const GL_APIBASE = GL_APIROOT + 'files/';
+const GL_RAW = p => GL_RAWROOT + p;                                    // browser-facing (base href / imgs)
+const GL_API = p => GL_APIBASE + encodeURIComponent(p) + '/raw?ref=' + GL_REF; // CORS-enabled fetch
+const GL_TREE = p => GL_APIROOT + 'tree?ref=' + GL_REF + '&per_page=100&path=' + encodeURIComponent(p); // list a folder
+
+let GN_COVER = "https://cdn.jsdelivr.net/gh/freebuisness/covers@main";
+let GN_HTML  = "https://cdn.jsdelivr.net/gh/freebuisness/html@main";
+let gnZones = [], ugsGames = [], seraphGames = [];
+let gnPop = {};
+let activeSrcs = new Set(['gn','ugs','seraph']);
+let activeSrc  = 'all'; // kept for compat
+let activeView = 'all';
+let activeSearch = '';
+let activeGame = null;
+
+// ── DYNAMIC REPO ENUMERATION ──────────────────────────────────────────────
+// Game lists are built at runtime by listing each source repo's folders — no
+// hardcoded arrays. GitHub sources (Seraph games, GN-Math html) use the git-
+// trees API (one CORS-enabled call returns the whole tree); UGS uses GitLab's
+// paginated tree API. Each result is cached in localStorage (TTL) so normal
+// use costs 0 network calls and we stay well under GitHub's 60-req/hr anon cap.
+// On any failure we reuse the last good cache (even if stale).
+const REPO_TTL = 24 * 60 * 60 * 1000; // 24h
+
+// Folder key → display name: "1-date-danger" → "1 Date Danger", "punchout" → "Punchout".
+function titleize(k){
+  const s = String(k).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return s.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(' ') || String(k);
+}
+
+// localStorage-cached list builder. fetcher() must resolve to a non-empty array.
+async function cachedList(key, fetcher){
+  const ck = 'n3_repo_' + key;
+  try {
+    const raw = localStorage.getItem(ck);
+    if (raw){ const o = JSON.parse(raw); if (o && Array.isArray(o.v) && o.v.length && (Date.now() - o.t) < REPO_TTL) return o.v; }
+  } catch(e){}
+  try {
+    const v = await fetcher();
+    if (Array.isArray(v) && v.length){ try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), v })); } catch(e){} return v; }
+    throw new Error('empty result');
+  } catch(e){
+    console.warn('[N3ptune] enumerate failed for', key, e);
+    try { const raw = localStorage.getItem(ck); if (raw){ const o = JSON.parse(raw); if (o && Array.isArray(o.v)) return o.v; } } catch(_){}
+    return [];
+  }
+}
+
+// GitLab paginated tree listing of one folder → [{name,type}, …].
+async function glList(path){
+  const out = [];
+  for (let page = 1; page <= 30; page++){
+    const r = await _origFetch(`${GL_APIROOT}tree?ref=${GL_REF}&per_page=100&page=${page}&path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) throw new Error('gitlab ' + r.status);
+    const d = await r.json();
+    if (!Array.isArray(d) || !d.length) break;
+    out.push(...d);
+    if (d.length < 100) break;
+  }
+  return out;
+}
+
+async function loadAll() {
+  const rerender = () => { buildSidebar(); render(); renderHome(); };
+  rerender(); // paint the shell immediately
+  // UGS lives on GitLab (CDN-independent) so start enumerating it right away.
+  const ugsP = loadUGS().then(rerender).catch(() => {});
+  // Seraph + GN-Math build CDN URLs, so wait for the fastest mirror first.
+  await resolveCdn().catch(() => {});
+  GN_COVER = `https://${_cdnHost}/gh/freebuisness/covers@main`;
+  GN_HTML  = `https://${_cdnHost}/gh/freebuisness/html@main`;
+  await Promise.allSettled([ ugsP, loadSeraph().then(rerender), loadGN().then(rerender) ]);
+  rerender();
+}
+
+// Guard against concurrent loadGN() calls (race condition fix)
+let _loadGNPromise = null;
+
+async function loadGN() {
+  if (_loadGNPromise) return _loadGNPromise;
+  _loadGNPromise = _doLoadGN().finally(() => { _loadGNPromise = null; });
+  return _loadGNPromise;
+}
+
+async function _doLoadGN() {
+  // GN-Math's canonical game list is freebuisness/assets' zones.json. Each entry
+  // carries the real display name, the cover (<id>.png) and the EXACT html
+  // filename per game (id 1 => 1-fde.html, id 164 => 164-temp2.html — a bare
+  // <id>.html guess gets these wrong), plus author/featured/special metadata.
+  // Fetched via jsDelivr (the freebuisness account isn't CDN-blocked, and we
+  // never call github). The {COVER_URL}/{HTML_URL} placeholders inside each entry
+  // are resolved to the live mirror by getUnified()/getAllGames(). We keep only
+  // real games (url points at an in-repo html — drops the Discord "suggest
+  // games" promo entry).
+  gnZones = await cachedList('gn_zones_v2', async () => {
+    // resolveCdn() already fetched zones.json to rank mirrors and cached the body
+    // in _cdnZonesText — reuse it so we don't fetch twice; fall back to a direct
+    // fetch (e.g. after a manual CDN switch) otherwise.
+    let text = _cdnZonesText;
+    if (!text) {
+      const res = await _origFetch(`https://${_cdnHost}/gh/freebuisness/assets@main/zones.json`, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error('zones ' + res.status);
+      text = await res.text();
+    }
+    const list = JSON.parse(text);
+    if (!Array.isArray(list)) throw new Error('zones: not an array');
+    return list.filter(g => g && typeof g.url === 'string' && g.url.indexOf('{HTML_URL}') === 0);
+  });
+  GN_COVER = `https://${_cdnHost}/gh/freebuisness/covers@main`;
+  GN_HTML  = `https://${_cdnHost}/gh/freebuisness/html@main`;
+  console.log('[N3ptune] GN-Math loaded (' + gnZones.length + ' games)');
+  _startPopFetch();
+}
+
+// Load popularity stats (non-blocking, called after zones are loaded)
+function _startPopFetch() {
+  ['year','month','week','day'].forEach(async p => {
+    try {
+      const d = await _origFetch(`https://data.jsdelivr.com/v1/stats/packages/gh/freebuisness/html@main/files?period=${p}`).then(r => r.json());
+      gnPop[p] = {};
+      d.forEach(f => { const m = f.name.match(/\/(\d+)\.html$/); if(m) gnPop[p][+m[1]] = f.hits?.total ?? 0; });
+    } catch(e) { gnPop[p] = {}; }
+  });
+}
+
+
+
+// SERAPH_GAMES is now enumerated at runtime by parsing a456pur/seraph's own
+// games/index.html via the jsDelivr CDN — see loadSeraph().
+
+// UGS_GAMES is now enumerated at runtime from the GitLab gmes/ folders — see loadUGS().
+
+async function loadUGS() {
+  // Enumerate the GitLab repo's gmes/ folders directly — each folder is one game
+  // holding all its files. _gldir marks it GitLab-proxied so launch() routes it
+  // through loadGitlabGame(), which loads/runs every file in the folder. Thumbs
+  // are flat files (thumbs/<key>.avif); broken ones are hidden by <img> onerror.
+  const keys = await cachedList('ugs_games', async () => {
+    const items = await glList('gmes');
+    return items.filter(x => x.type === 'tree').map(x => x.name);
+  });
+  ugsGames = keys.map(k => {
+    const dir = 'gmes/' + k;
+    return {
+      _src:'ugs', _key:'ugs_'+k, _id:'ugs_'+k,
+      name: titleize(k),
+      cover: GL_RAW('thumbs/' + k + '.avif'),
+      url:   GL_RAW(dir + '/index.html'),
+      _gldir: dir,
+      tags:[], featured:false,
+    };
+  });
+  ugsGames.sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+async function loadSeraph() {
+  // Seraph's repo is metadata-blocked on jsDelivr's package API (403) and we
+  // never touch github.com, so we enumerate a different compliant way: fetch the
+  // repo's OWN games listing page (games/index.html — served fine by the jsDelivr
+  // CDN) and parse its game cards. Each card looks like:
+  //   <a href="<k>/index.html"><div class="button"
+  //       style="background-image:url('../images/thumbnails/<thumb>');"
+  //       data-genre="<genre>"><h2>Name</h2>…
+  // This yields ~500 games with real display names, covers and genres — more,
+  // and richer, than the old hardcoded list. launch() loads/runs each game
+  // folder via <base href> to the CDN (mirror-swapped by tryFetch).
+  const BASE = 'https://cdn.jsdelivr.net/gh/a456pur/seraph@main/';
+  const games = await cachedList('seraph_v2', async () => {
+    const res = await _origFetch(BASE + 'games/index.html', { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('seraph index ' + res.status);
+    const html = await res.text();
+    const out = [], seen = new Set();
+    const re = /<a[^>]*href="([^"?#]+?)\/index\.html"[^>]*>\s*<div class="button"[^>]*background-image:\s*url\(\s*['"]?\.\.\/images\/thumbnails\/([^'")]+?)['"]?\s*\)[^>]*?>\s*<h2>([^<]*)<\/h2>/gi;
+    let m;
+    while ((m = re.exec(html))){
+      const k = m[1].split('/').pop();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      const gm = m[0].match(/data-genre="([^"]*)"/i);
+      out.push({ k, thumb: 'images/thumbnails/' + m[2], name: (m[3] || '').trim(), genre: gm ? gm[1].trim() : '' });
+    }
+    if (!out.length) throw new Error('seraph: no games parsed');
+    return out;
+  });
+  seraphGames = games.map(({ k, thumb, name, genre }) => ({
+    _src:'seraph', _key:'seraph_'+k, _id:'seraph_'+k,
+    name: titleize(name || k),
+    cover: thumb ? BASE + thumb : null,
+    url:   BASE + 'games/' + k + '/index.html',
+    tags: genre ? [genre] : [], featured:false,
+  }));
+  seraphGames.sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+
+
+function getUnified() {
+  let list = [];
+  if (activeSrcs.has('gn'))
+    list.push(...gnZones.map(z=>{
+      // Build the cover URL from the template or fall back to id-based path
+      let cover = z.cover?.replace('{COVER_URL}',GN_COVER).replace('{HTML_URL}',GN_HTML)??null;
+      if (cover === GN_COVER || cover === GN_HTML) cover = GN_COVER+'/'+z.id+'.png';
+      // Build the game URL: if zone.url is just the base placeholder or missing, use id-based path
+      let url = z.url?.replace('{COVER_URL}',GN_COVER).replace('{HTML_URL}',GN_HTML)??null;
+      if (!url || url === GN_HTML || url === GN_COVER || url === GN_HTML+'/' || url === GN_HTML+'/undefined.html')
+        url = GN_HTML+'/'+z.id+'.html';
+      return {
+        _src:'gn', _key:'gn_'+z.id, _id:z.id,
+        name:z.name, cover, url,
+        tags: z.special||[], featured:!!z.featured,
+      };
+    }));
+  if (activeSrcs.has('ugs'))
+    list.push(...ugsGames);
+  if (activeSrcs.has('seraph'))
+    list.push(...seraphGames);
+  return list;
+}
+
+function getFiltered() {
+  let list = getUnified();
+  if (activeView==='featured')                list=list.filter(g=>g.featured);
+  else if (activeView.startsWith('tag:')){ const t=activeView.slice(4); list=list.filter(g=>g.tags.map(x=>x.toLowerCase()).includes(t)); }
+  if (activeSearch){ const q=activeSearch.toLowerCase(); list=list.filter(g=>g.name.toLowerCase().includes(q)); }
+  return getSorted(list);
+}
+
+function getSorted(list) {
+  const s = document.getElementById('sortSelect').value;
+  const out = [...list];
+  if(s==='name')          out.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(s==='popular')  out.sort((a,b)=>(gnPop.year?.[b._id]||0)-(gnPop.year?.[a._id]||0));
+  else if(s==='trendingMonth') out.sort((a,b)=>(gnPop.month?.[b._id]||0)-(gnPop.month?.[a._id]||0));
+  else if(s==='trendingWeek')  out.sort((a,b)=>(gnPop.week?.[b._id]||0)-(gnPop.week?.[a._id]||0));
+  else if(s==='trendingDay')   out.sort((a,b)=>(gnPop.day?.[b._id]||0)-(gnPop.day?.[a._id]||0));
+  return out;
+}
+
+function buildSidebar() {
+  // No tag sidebar in new layout
+}
+
+// ── VIRTUAL SCROLL STATE ──
+let _vsItems = [];
+let _vsRendered = 0;
+const VS_BATCH = 80;
+
+function render() {
+  const main = document.getElementById('games-content');
+  if(!main) return;
+  const list = getFiltered();
+  _vsItems = list;
+  _vsRendered = 0;
+  const showGN  = activeSrcs.has('gn');
+  const showUGS = activeSrcs.has('ugs');
+  const showSeraph = activeSrcs.has('seraph');
+  const featured = getUnified().filter(g=>g.featured);
+  const badges = (showGN?'<span class="src-badge gn">GN-MATH</span>':'')+(showUGS?'<span class="src-badge ugs">UGS</span>':'')+(showSeraph?'<span class="src-badge seraph">SERAPH</span>':'');
+  const viewLabel = activeView==='all'?'All Games':'Tag: '+cap(activeView.slice(4));
+  let html=`<div class="status-bar">
+    <div class="status-left"><span class="status-dot"></span>${activeSearch?`"${activeSearch}"`:viewLabel} ${badges}</div>
+    <div class="status-right">${list.length.toLocaleString()} game${list.length!==1?'s':''}</div>
+  </div>`;
+  if (activeView==='all'&&!activeSearch&&featured.length&&showGN) {
+    html+='<div class="feat-row">';
+    for(const g of featured){
+      const plays=gnPop.year?.[g._id];
+      html+=`<div class="feat-card${blockedGames.has(g._key)?' blocked':''}" onclick="launch('${g._key}')">`
+        +(g.cover?`<img class="feat-img" src="${g.cover}" alt="${esc(g.name)}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="feat-ph" style="display:none">${_IC_GAMEPAD}</div>`:`<div class="feat-ph">${_IC_GAMEPAD}</div>`)
+        +`<div class="feat-info"><div class="feat-name">${esc(g.name)}</div>`
+        +`<div class="feat-sub"><span class="gsrc-dot gn"></span>${plays?fmtN(plays)+' plays':(g.tags[0]||'GN-Math')}</div></div></div>`;
+    }
+    html+='</div>';
+  }
+  if(activeView!=='featured') html+=`<div class="sec-label">${activeSearch?'Results':viewLabel}</div>`;
+  html += '<div class="grid" id="vs-grid"></div><div id="vs-sentinel" style="height:1px"></div>';
+  main.innerHTML = html;
+  _vsRenderBatch();
+  const sentinel = document.getElementById('vs-sentinel');
+  if(sentinel){
+    if(window._vsObserver) window._vsObserver.disconnect();
+    window._vsObserver = new IntersectionObserver(entries=>{
+      if(entries[0].isIntersecting) _vsRenderBatch();
+    }, {root: main, rootMargin:'200px'});
+    window._vsObserver.observe(sentinel);
+  }
+}
+
+function _vsRenderBatch() {
+  const grid = document.getElementById('vs-grid');
+  if(!grid || _vsRendered >= _vsItems.length) return;
+  const end = Math.min(_vsRendered + VS_BATCH, _vsItems.length);
+  const frag = document.createDocumentFragment();
+  for(let i = _vsRendered; i < end; i++){
+    const g = _vsItems[i];
+    const plays=g._src==='gn'?gnPop.year?.[g._id]:null;
+    const sub=plays?fmtN(plays)+' plays':(g.tags[0]?cap(g.tags[0]):(g._src==='ugs'?'UGS':g._src==='seraph'?'Seraph':'GN-Math'));
+    const card=document.createElement('div');
+    card.className='gcard'+(blockedGames.has(g._key)?' blocked':'');
+    card.setAttribute('onclick',`launch('${g._key}')`);
+    card.innerHTML=(g.cover
+      ?`<img class="gcard-img" src="${g.cover}" alt="${esc(g.name)}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="gcard-ph" style="display:none">${_IC_GAMEPAD}</div>`
+      :`<div class="gcard-ph">${_IC_GAMEPAD}</div>`)
+      +`<div class="ginfo"><div class="gname">${esc(g.name)}</div>`
+      +`<div class="gsub"><span class="gsrc-dot ${g._src}"></span>${sub}</div></div>`
+      +`<div class="play-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
+    frag.appendChild(card);
+  }
+  grid.appendChild(frag);
+  _vsRendered = end;
+}
+
+function cap(s){return s.replace(/\w\S*/g,t=>t.charAt(0).toUpperCase()+t.slice(1).toLowerCase());}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function fmtN(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n);}
+
+
+function getAllGames() {
+  // Get all games regardless of activeSrcs filter
+  let list = [];
+  list.push(...gnZones.map(z=>({
+    _src:'gn', _key:'gn_'+z.id, _id:z.id,
+    name:z.name,
+    cover:z.cover?.replace('{COVER_URL}',GN_COVER).replace('{HTML_URL}',GN_HTML)??null,
+    url:  z.url?.replace('{COVER_URL}',GN_COVER).replace('{HTML_URL}',GN_HTML)??null,
+    tags: z.special||[], featured:!!z.featured,
+  })));
+  list.push(...ugsGames);
+  list.push(...seraphGames);
+  return list;
+}
+
+function pickRandom(arr, n, filterFn) {
+  const pool = filterFn ? arr.filter(filterFn) : arr;
+  const shuffled = [...pool].sort(()=>Math.random()-.5);
+  return shuffled.slice(0, n);
+}
+
+function hcardHTML(g) {
+  const srcLabel = g._src==='gn'?'GN-Math':g._src==='seraph'?'Seraph':'UGS';
+  const dotClass = g._src;
+  const plays = g._src==='gn' && gnPop.year?.[g._id] ? fmtN(gnPop.year[g._id])+' plays' : srcLabel;
+  return `<div class="hcard" onclick="launch('${g._key}')">
+    ${g.cover
+      ? `<img class="hcard-thumb" src="${g.cover}" alt="${esc(g.name)}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="hcard-ph" style="display:none">${_IC_GAMEPAD}</div>`
+      : `<div class="hcard-ph">${_IC_GAMEPAD}</div>`}
+    <div class="hcard-body">
+      <div class="hcard-name">${esc(g.name)}</div>
+      <div class="hcard-meta"><span class="gsrc-dot ${dotClass}"></span>${plays}</div>
+    </div>
+    <div class="hcard-play"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg></div>
+  </div>`;
+}
+
+function homeSection(title, dotCls, games, srcKey) {
+  if (!games.length) return '';
+  const moreClick = srcKey ? `onclick="setPillSource('${srcKey}')"` : `onclick="showPage('games')"`;
+  return `<div class="home-section">
+    <div class="home-sec-header">
+      <div class="home-sec-title"><span class="home-sec-dot ${dotCls}"></span>${title}</div>
+      <button class="home-sec-more" ${moreClick}>See all →</button>
+    </div>
+    <div class="home-card-row">${games.map(hcardHTML).join('')}</div>
+  </div>`;
+}
+
+// ── Refined Neptune logo (inline SVG, replaces the old 168KB PNG ×3) ──
+let _nid = 0;
+function neptSVG(size, uid){
+  const u = 'np' + (uid != null ? uid : _nid++);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" style="display:block">`
+    + `<defs>`
+    + `<clipPath id="${u}c"><circle cx="50" cy="50" r="47"/></clipPath>`
+    + `<radialGradient id="${u}g" cx="37%" cy="30%" r="80%"><stop offset="0" stop-color="#8ee9f2"/><stop offset="0.45" stop-color="#31a9db"/><stop offset="1" stop-color="#155a9e"/></radialGradient>`
+    + `<radialGradient id="${u}h" cx="35%" cy="28%" r="42%"><stop offset="0" stop-color="#d6fbff" stop-opacity="0.55"/><stop offset="1" stop-color="#d6fbff" stop-opacity="0"/></radialGradient>`
+    + `</defs>`
+    + `<circle cx="50" cy="50" r="47" fill="url(#${u}g)"/>`
+    + `<g clip-path="url(#${u}c)" stroke-linecap="round" fill="none">`
+    + `<path d="M-5 22 Q 30 15 55 22 T 108 20" stroke="#c9f4fb" stroke-opacity="0.7" stroke-width="4.5"/>`
+    + `<path d="M-5 33 Q 28 27 52 33 T 108 31" stroke="#12608f" stroke-opacity="0.55" stroke-width="3"/>`
+    + `<path d="M-5 43 Q 34 37 58 44 T 108 42" stroke="#dafbff" stroke-opacity="0.6" stroke-width="6"/>`
+    + `<path d="M-5 56 Q 30 50 54 56 T 108 55" stroke="#12608f" stroke-opacity="0.5" stroke-width="3.5"/>`
+    + `<path d="M-5 66 Q 33 60 57 67 T 108 65" stroke="#bfeff8" stroke-opacity="0.6" stroke-width="5"/>`
+    + `<path d="M-5 77 Q 29 72 52 78 T 108 77" stroke="#12608f" stroke-opacity="0.45" stroke-width="3"/>`
+    + `<path d="M-5 86 Q 34 81 58 87 T 108 86" stroke="#cff6fc" stroke-opacity="0.5" stroke-width="4"/>`
+    + `</g>`
+    + `<ellipse cx="38" cy="34" rx="30" ry="26" fill="url(#${u}h)"/>`
+    + `<circle cx="50" cy="50" r="47" fill="none" stroke="#0d4676" stroke-opacity="0.6" stroke-width="1.5"/>`
+    + `</svg>`;
+}
+function injectLogos(){
+  document.querySelectorAll('.neptlogo:empty').forEach(e => { e.innerHTML = neptSVG(+e.dataset.size || 40); });
+}
+
+// ── Changelog modal ──
+function openChangelog(){ const o=document.getElementById('changelogOverlay'); if(o) o.classList.add('open'); }
+function closeChangelog(){ const o=document.getElementById('changelogOverlay'); if(o) o.classList.remove('open'); }
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeChangelog(); });
+
+// ── Popular games for the home row: working titles only, NEVER GN-Math, never blocked ──
+const POPULAR_PICKS = [/slope/i,/drift hunters/i,/moto x3m/i,/retro bowl/i,/1v1/i,/basket random/i,/getting over it/i,/tunnel rush/i,/\bvex\b/i,/geometry dash/i,/subway/i,/cookie/i,/stickman/i,/among us/i,/bitlife/i,/granny/i,/baldi/i,/friday night|fnf/i,/run 3|run 2/i,/paper\.?io/i,/eaglercraft|minecraft/i,/\b2048\b/i];
+function popularGames(n){
+  const pool = [...ugsGames, ...seraphGames].filter(g => g && g.cover && !blockedGames.has(g._key));
+  const picks = [], used = new Set();
+  for (const re of POPULAR_PICKS){
+    const g = pool.find(x => re.test(x.name) && !used.has(x._key));
+    if (g){ picks.push(g); used.add(g._key); }
+    if (picks.length >= n) break;
+  }
+  if (picks.length < n){
+    for (const g of [...pool].sort(() => Math.random() - .5)){
+      if (!used.has(g._key)){ picks.push(g); used.add(g._key); }
+      if (picks.length >= n) break;
+    }
+  }
+  return picks.slice(0, n);
+}
+function popCard(g){
+  return `<div class="pop-card${blockedGames.has(g._key)?' blocked':''}" onclick="launch('${g._key}')" title="${esc(g.name)}">`
+    + `<img class="pop-thumb" src="${g.cover}" alt="${esc(g.name)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`
+    + `<span class="pop-name">${esc(g.name)}</span></div>`;
+}
+
+function renderHome(){
+  const all = getAllGames();
+  const fc = document.getElementById('foot-count');
+  if (fc) fc.textContent = all.length.toLocaleString() + ' games';
+
+  const row = document.getElementById('popular-row');
+  if (row){
+    const picks = popularGames(8);
+    row.innerHTML = picks.length
+      ? picks.map(popCard).join('')
+      : '<div style="font-size:12.6px;color:var(--muted)">loading games&#8230;</div>';
+  }
+
+  const rec = document.getElementById('home-recent');
+  if (rec){
+    const recent = [...playedGames].slice(-6).reverse().map(k => all.find(g => g._key === k)).filter(Boolean);
+    rec.innerHTML = recent.length
+      ? '<div class="recent-label">Jump back in</div><div class="recent-row">'
+        + recent.map(g => `<div class="recent-chip" onclick="launch('${g._key}')">${esc(g.name)}</div>`).join('')
+        + '</div>'
+      : '';
+  }
+}
+injectLogos();
+
+
+// ── Star canvas for hero background ──
+function initHeroCanvas() {
+  const canvas = document.getElementById('hero-canvas');
+  if (!canvas) return;
+  const hero = canvas.parentElement;
+  const resize = () => { canvas.width = hero.offsetWidth; canvas.height = hero.offsetHeight; };
+  resize();
+  window.addEventListener('resize', resize);
+  const ctx = canvas.getContext('2d');
+  const stars = Array.from({length: 80}, () => ({
+    x: Math.random(), y: Math.random(),
+    r: Math.random() * 1.4 + 0.3,
+    o: Math.random() * 0.5 + 0.1,
+    s: Math.random() * 0.4 + 0.15,
+    t: Math.random() * Math.PI * 2,
+  }));
+  let rafId = null;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = Date.now() / 1000;
+    for (const s of stars) {
+      const opacity = s.o + Math.sin(t * s.s + s.t) * 0.18;
+      ctx.beginPath();
+      ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(148,185,255,${Math.max(0,opacity)})`;
+      ctx.fill();
+    }
+    rafId = requestAnimationFrame(draw);
+  }
+  canvas._startAnim = () => { if (!rafId) rafId = requestAnimationFrame(draw); };
+  canvas._stopAnim  = () => { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } };
+  canvas._startAnim();
+}
+
+function doHomeSearch() {
+  const q = document.getElementById('homeSearch')?.value?.trim();
+  if (q) { activeSearch = q; activeView = 'all'; }
+  showPage('games');
+}
+
+function setSource(src) {
+  // Legacy: set all or single
+  if(src==='all'){activeSrcs=new Set(['gn','ugs','seraph']);}
+  else{activeSrcs=new Set([src]);}
+  activeSrc=src;
+  updateSrcFilterBtns();
+  ['all','gn','ugs','seraph'].forEach(s=>{
+    const p=document.getElementById('pill-'+s);
+    if(p){p.classList.toggle('active',s===src);}
+  });
+  render();
+}
+
+function setPillSource(src) {
+  setSource(src);
+  const q = document.getElementById('homeSearch')?.value?.trim();
+  if(q) activeSearch=q;
+  showPage('games');
+}
+
+function toggleSrc(src) {
+  if(activeSrcs.has(src)){
+    if(activeSrcs.size>1) activeSrcs.delete(src);
+  } else {
+    activeSrcs.add(src);
+  }
+  updateSrcFilterBtns();
+  render();
+}
+
+function updateSrcFilterBtns(){
+  ['gn','ugs','seraph'].forEach(s=>{
+    const b=document.getElementById('sfbtn-'+s);
+    if(b) b.classList.toggle('on', activeSrcs.has(s));
+  });
+}
+
+function setView(view,el){
+  activeView=view; activeSearch='';
+  render();
+}
+
+function resetView(){activeView='all';activeSearch='';render();}
+
+
+
+document.getElementById('sortSelect')?.addEventListener('change',()=>render());
+
+function launchRandom(){
+  const list=getFiltered();
+  if(!list.length)return;
+  launch(list[Math.floor(Math.random()*list.length)]._key);
+}
+
+function findByKey(key){return getUnified().find(g=>g._key===key);}
+
+// Host-bridge stub: ~16% of the UGS games were ripped from a host (Ultimate
+// Game Stash) whose page exported APIs into the game via a parent-window global.
+// Their bootstrap calls window.parent.maeExportApis_() on the very first line;
+// with no such function it throws and kills that <script> block. A tolerant
+// no-op satisfies the call so the game's own init continues. Harmless name.
+window.maeExportApis_ = window.maeExportApis_ || function(){ return {}; };
+
+// ── GITLAB GAME LOADER ────────────────────────────────────
+// Loads a Hydra GitLab game into the iframe, working around GitLab's lack of
+// CORS + its text/plain;nosniff serving:
+//   • fetch index.html + every static <script>/<link>/<img> through the CORS-
+//     enabled API endpoint and hand them to the iframe as blobs with the right
+//     MIME type (so nosniff no longer blocks scripts/styles),
+//   • set <base href> to the raw game folder,
+//   • inject a fetch/XHR shim that reroutes any runtime request under that
+//     folder to the API endpoint (so heavy games can load their .data/.wasm),
+//     plus a WebAssembly streaming→arrayBuffer fallback (raw MIME isn't wasm).
+const GL_MIME = {
+  js:'text/javascript', mjs:'text/javascript', cjs:'text/javascript',
+  css:'text/css', json:'application/json', wasm:'application/wasm',
+  html:'text/html', htm:'text/html', xml:'application/xml', svg:'image/svg+xml',
+  png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
+  webp:'image/webp', avif:'image/avif', ico:'image/x-icon', bmp:'image/bmp',
+  mp3:'audio/mpeg', ogg:'audio/ogg', wav:'audio/wav', m4a:'audio/mp4',
+  mp4:'video/mp4', webm:'video/webm',
+  woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf', otf:'font/otf',
+  txt:'text/plain', csv:'text/csv',
+};
+
+function _glJoin(base, rel) {
+  rel = String(rel).trim().replace(/^\.\//, '');
+  if (rel.startsWith('/')) return rel.slice(1).split(/[?#]/)[0]; // repo-root relative
+  const stack = base.split('/');
+  rel.split('/').forEach(part => {
+    if (part === '..') stack.pop();
+    else if (part === '.' || part === '') { /* skip */ }
+    else stack.push(part);
+  });
+  return stack.join('/').split(/[?#]/)[0];
+}
+
+// Most games live at <dir>/index.html, but some (Unity/emulator exports) use
+// <dir>/<folder>.html and have NO index.html. Try index.html first, then list
+// the folder via the tree API and pick the real entry document.
+async function glFetchEntry(dir) {
+  let r = await fetch(GL_API(dir + '/index.html'));
+  if (r.ok) return await r.text();
+  let items = [];
+  try { items = await (await fetch(GL_TREE(dir))).json(); } catch (e) {}
+  const folder = dir.split('/').pop();
+  const htmls = (Array.isArray(items) ? items : [])
+    .filter(x => x.type === 'blob' && /\.html?$/i.test(x.name))
+    .map(x => x.name);
+  const pick = htmls.find(n => /^index\.html?$/i.test(n))
+            || htmls.find(n => n.replace(/\.html?$/i, '') === folder)
+            || htmls[0];
+  if (!pick) throw new Error('no entry html in ' + dir);
+  r = await fetch(GL_API(dir + '/' + pick));
+  if (!r.ok) throw new Error('entry ' + r.status);
+  return await r.text();
+}
+
+// ── CDN REROUTE (currently a no-op — jsDelivr only) ────────────────────────
+// History: this rerouted jsdelivr.net → staticdelivr.com to dodge jsDelivr's
+// per-account 403 blocks. In practice that did MORE harm than good:
+//   • staticdelivr 301-redirects .wasm (and other large binaries) to a
+//     text/plain stub → "Failed to load Ruffle WASM" / dead Godot/Unity games;
+//   • the blocked accounts we actually hit also 404 on staticdelivr, so the
+//     reroute didn't even help its intended case;
+//   • jsDelivr serves every account we serve games from (freebuisness, a456pur,
+//     and the third-party engine hosts games embed) with correct MIME + CORS.
+// So `S()` / `_cdnStatic()` now keep everything on jsDelivr. Kept as hookable
+// no-ops in case a real per-account fallback is needed later.
+// __cdnfix runs inside each game iframe and could reroute fetch, XHR, dynamic
+// <script>/<img>/<link>, setAttribute, and Worker. Static markup is rewritten
+// separately (the parser sets those before any shim can hook them). Together
+// they cover every way a game can request an asset. Self-contained so it
+// survives .toString() injection (no closure references).
+function __cdnfix() {
+  // No-op: keep everything on jsDelivr (staticdelivr 301s .wasm and breaks games
+  // like Ruffle; jsDelivr serves these assets correctly). Returning null means
+  // "don't rewrite". Kept as a seam for a future per-account fallback.
+  function S(u){ return null; }
+  if (window.fetch){ var of = window.fetch.bind(window); window.fetch = function(i, n){ try { var u = (i && i.url) ? i.url : i, m = S(u); if (m) return (i && i.url) ? of(new Request(m, i), n) : of(m, n); } catch(e){} return of(i, n); }; }
+  var oo = XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open = function(me, u){ try { var m = S(u); if (m) arguments[1] = m; } catch(e){} return oo.apply(this, arguments); };
+  function hk(proto, prop){ try { var d = proto && Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
+    Object.defineProperty(proto, prop, { configurable: true, enumerable: d.enumerable, get: function(){ return d.get.call(this); }, set: function(v){ var m; try { m = S(v); } catch(e){} d.set.call(this, m || v); } }); } catch(e){} }
+  hk(window.HTMLScriptElement && HTMLScriptElement.prototype, 'src');
+  hk(window.HTMLLinkElement && HTMLLinkElement.prototype, 'href');
+  hk(window.HTMLImageElement && HTMLImageElement.prototype, 'src');
+  var sa = Element.prototype.setAttribute; Element.prototype.setAttribute = function(n, v){ try { var l = ('' + n).toLowerCase(); if (l === 'src' || l === 'href'){ var m = S(v); if (m) return sa.call(this, n, m); } } catch(e){} return sa.apply(this, arguments); };
+  if (window.Worker){ var OW = window.Worker; window.Worker = function(u, o){ try { var m = S(u); if (m) return new OW(m, o); } catch(e){} return new OW(u, o); }; window.Worker.prototype = OW.prototype; }
+}
+function _cdnfixShim(){ return '<script>(' + __cdnfix.toString() + ')()<\/script>'; }
+
+// Rewrite jsdelivr.net /gh/USER/REPO@REF → staticdelivr /gh/USER/REPO/REF in a
+// blob of HTML/text (for static <script>/<link>/<img> tags the parser handles).
+function _cdnStatic(html){
+  // No-op: keep game markup on jsDelivr (see the CDN REROUTE note above —
+  // staticdelivr 301s .wasm and breaks Ruffle/Godot/Unity games).
+  return String(html);
+}
+
+// Some UGS games (notably 3kh0-style single-file imports like hextris) keep
+// almost all assets on an external CDN via absolute URLs, but leave a few
+// RELATIVE stragglers (a script, the on-screen button images) that 404 against
+// the near-empty GitLab folder — the classic "black screen + broken-image icon".
+// Detect the dominant CDN directory those absolute assets share so relative refs
+// can fall back to it. Returns a base ending in "/", or null.
+function _glExtBase(html) {
+  const re = /<(?:script|link|img)\b[^>]*\b(?:src|href)=(["'])(https?:\/\/[^"']+)\1/gi;
+  // NOTE: raw.githubusercontent.com is deliberately excluded — we never adopt a
+  // GitHub URL as a load base (jsDelivr/GitLab only).
+  const CDN = /(?:jsdelivr\.net|statically\.io|githack\.com)\//i;
+  const urls = []; let m;
+  while ((m = re.exec(html))) { const u = m[2].split(/[?#]/)[0]; if (CDN.test(u)) urls.push(u); }
+  if (urls.length < 2) return null;
+  let p = urls[0];
+  for (const u of urls) { let i = 0; while (i < p.length && p[i] === u[i]) i++; p = p.slice(0, i); }
+  const cut = p.lastIndexOf('/');
+  if (cut < 0) return null;
+  p = p.slice(0, cut + 1);
+  // Require at least a versioned repo base (…@ref/) — may be the repo root (ovo)
+  // or a game subdir (…@ref/hextris/). Anything shorter (…/gh/ only, from URLs
+  // spanning different repos) is not a usable base.
+  return /@[^/]+\//.test(p) ? p : null;
+}
+
+// Runs INSIDE the game iframe (injected as the very first <head> script via
+// __glframe.toString()). Works around GitLab serving every file as
+// text/plain;nosniff, which makes the browser BLOCK any script/stylesheet the
+// game loads at runtime (dynamic <script>, new Worker(), etc.). We can't change
+// GitLab's headers, so we intercept those loads and hand back blob: URLs typed
+// with the correct MIME. Data reads (fetch/XHR/wasm) don't care about MIME, so
+// they're just rerouted to the CORS-enabled API endpoint. Self-contained: takes
+// only primitives so it survives .toString() with no closure references.
+function __glframe(RAWROOT, APIBASE, REF, EXTBASE, DIRPREFIX) {
+  var doc = document;
+  function api(repoPath){ return APIBASE + encodeURIComponent(repoPath) + '/raw?ref=' + REF; }
+  // When an in-repo asset 404s and this game imports from an external CDN, map
+  // its game-folder-relative path onto that CDN (correct MIME + CORS, load direct).
+  function extFallback(repo){ return (EXTBASE && DIRPREFIX && repo.indexOf(DIRPREFIX) === 0) ? (EXTBASE + repo.slice(DIRPREFIX.length)) : null; }
+  function absUrl(u, base){ try { return new URL(String(u), base || doc.baseURI).href; } catch(e){ return null; } }
+  // A repo path if the URL lives under the raw game host, else null (external → leave alone).
+  function toRepo(abs){ return (abs && abs.indexOf(RAWROOT) === 0) ? decodeURIComponent(abs.slice(RAWROOT.length).split(/[?#]/)[0]) : null; }
+  function joinPath(base, rel){
+    rel = String(rel).replace(/^\.\//, '');
+    var st = base ? base.split('/') : [];
+    rel.split('/').forEach(function(p){ if (p === '..') st.pop(); else if (p && p !== '.') st.push(p); });
+    return st.join('/').split(/[?#]/)[0];
+  }
+  // Synchronous fetch so we can return a blob URL from a property setter (which
+  // can't be async). Only used for text resources (js/css) at load time.
+  function syncText(url){
+    try { var x = new XMLHttpRequest(); x.open('GET', url, false); x.send();
+      if (x.status >= 200 && x.status < 300) return x.responseText; } catch(e){}
+    return null;
+  }
+  var memo = {};
+  function jsBlob(val){
+    var abs = absUrl(val); var repo = toRepo(abs); if (!repo) return null;
+    if (memo[abs]) return memo[abs];
+    var txt = syncText(api(repo));
+    if (txt == null){ var ef = extFallback(repo); return ef ? (memo[abs] = ef) : null; }
+    return memo[abs] = URL.createObjectURL(new Blob([txt], { type: 'text/javascript' }));
+  }
+  function cssBlob(val){
+    var abs = absUrl(val); var repo = toRepo(abs); if (!repo) return null;
+    if (memo[abs]) return memo[abs];
+    var txt = syncText(api(repo));
+    if (txt == null){ var ef = extFallback(repo); return ef ? (memo[abs] = ef) : null; }
+    var d = repo.replace(/\/[^\/]*$/, '');
+    txt = txt.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, function(m, q, u){
+      if (/^(https?:|data:|blob:|#|\/\/)/i.test(u)) return m;
+      return 'url(' + api(u.charAt(0) === '/' ? u.slice(1) : joinPath(d, u)) + ')';
+    });
+    return memo[abs] = URL.createObjectURL(new Blob([txt], { type: 'text/css' }));
+  }
+  // Runtime <img> whose src points into the (asset-less) GitLab folder for an
+  // external-CDN game: rewrite straight to the CDN. Pure string swap, no fetch.
+  function imgFix(val){ if (!EXTBASE) return null; var repo = toRepo(absUrl(val)); return (repo && extFallback(repo)) || null; }
+  // Workers run in their own context without this shim, so prepend a mini-shim
+  // that reroutes the worker's own importScripts/fetch/XHR back to the API.
+  function workerBlob(val){
+    var abs = absUrl(val); var repo = toRepo(abs); if (!repo) return null;
+    var txt = syncText(api(repo)); if (txt == null) return null;
+    var wbase = abs.replace(/[^\/]*$/, '');
+    var pre = '(function(){var RAWROOT=' + JSON.stringify(RAWROOT) + ',APIBASE=' + JSON.stringify(APIBASE) + ',REF=' + JSON.stringify(REF) + ',BASE=' + JSON.stringify(wbase) + ';' +
+      'function api(p){return APIBASE+encodeURIComponent(p)+"/raw?ref="+REF;}' +
+      'function toApi(u){try{var a=new URL(String(u),BASE).href;if(a.indexOf(RAWROOT)===0)return api(decodeURIComponent(a.slice(RAWROOT.length).split(/[?#]/)[0]));}catch(e){}return null;}' +
+      'var oIS=self.importScripts;if(oIS)self.importScripts=function(){var a=[].map.call(arguments,function(u){return toApi(u)||u;});return oIS.apply(self,a);};' +
+      'if(self.fetch){var of=self.fetch.bind(self);self.fetch=function(i,n){try{var u=(i&&i.url)?i.url:i;var m=toApi(u);if(m)return of(m,n);}catch(e){}return of(i,n);};}' +
+      'var oo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{var x=toApi(u);if(x)arguments[1]=x;}catch(e){}return oo.apply(this,arguments);};' +
+      'try{if(self.WebAssembly&&WebAssembly.instantiateStreaming)WebAssembly.instantiateStreaming=function(r,i){return Promise.resolve(r).then(function(x){return x.arrayBuffer();}).then(function(b){return WebAssembly.instantiate(b,i);});}}catch(e){}' +
+      '})();\n';
+    return URL.createObjectURL(new Blob([pre + txt], { type: 'text/javascript' }));
+  }
+
+  // Intercept the .src/.href PROPERTY setter (s.src = '...').
+  function hookProp(proto, prop, conv){
+    var d = proto && Object.getOwnPropertyDescriptor(proto, prop);
+    if (!d || !d.set) return;
+    Object.defineProperty(proto, prop, { configurable: true, enumerable: d.enumerable,
+      get: function(){ return d.get.call(this); },
+      set: function(v){ var b; try { b = conv.call(this, v); } catch(e){} d.set.call(this, b || v); } });
+  }
+  hookProp(window.HTMLScriptElement && HTMLScriptElement.prototype, 'src', function(v){ return jsBlob(v); });
+  hookProp(window.HTMLLinkElement && HTMLLinkElement.prototype, 'href', function(v){
+    var rel = (this.rel || '').toLowerCase(); return (rel && rel.indexOf('stylesheet') < 0) ? null : cssBlob(v);
+  });
+  hookProp(window.HTMLImageElement && HTMLImageElement.prototype, 'src', function(v){ return imgFix(v); });
+  // Intercept the .setAttribute('src'|'href', ...) path too.
+  var setAttr = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function(name, val){
+    try {
+      var n = String(name).toLowerCase(), tn = this.tagName;
+      if (tn === 'SCRIPT' && n === 'src'){ var b = jsBlob(val); if (b) return setAttr.call(this, 'src', b); }
+      else if (tn === 'LINK' && n === 'href'){ var rel = (this.getAttribute('rel') || '').toLowerCase();
+        if (!rel || rel.indexOf('stylesheet') >= 0){ var c = cssBlob(val); if (c) return setAttr.call(this, 'href', c); } }
+      else if (tn === 'IMG' && n === 'src'){ var im = imgFix(val); if (im) return setAttr.call(this, 'src', im); }
+    } catch(e){}
+    return setAttr.apply(this, arguments);
+  };
+  // Reroute new Worker(url) to a shimmed blob worker.
+  if (window.Worker){
+    var OW = window.Worker;
+    window.Worker = function(url, opts){ try { var b = workerBlob(url); if (b) return new OW(b, opts); } catch(e){} return new OW(url, opts); };
+    window.Worker.prototype = OW.prototype;
+  }
+
+  // Data reads: reroute in-repo fetch/XHR to the API (MIME irrelevant here), and
+  // fall back from streaming wasm (raw MIME isn't application/wasm) to arrayBuffer.
+  function toApiMain(u){ var r = toRepo(absUrl(u)); return r ? api(r) : null; }
+  if (window.fetch){ var of = window.fetch.bind(window);
+    window.fetch = function(input, init){ try { var u = (input && input.url) ? input.url : input; var m = toApiMain(u);
+      if (m) return (input && input.url) ? of(new Request(m, input), init) : of(m, init); } catch(e){} return of(input, init); }; }
+  var oo = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url){ try { var m = toApiMain(url); if (m) arguments[1] = m; } catch(e){} return oo.apply(this, arguments); };
+  try { if (window.WebAssembly && WebAssembly.instantiateStreaming) WebAssembly.instantiateStreaming = function(r, i){ return Promise.resolve(r).then(function(x){ return x.arrayBuffer(); }).then(function(b){ return WebAssembly.instantiate(b, i); }); } } catch(e){}
+  try { if (window.WebAssembly && WebAssembly.compileStreaming) WebAssembly.compileStreaming = function(r){ return Promise.resolve(r).then(function(x){ return x.arrayBuffer(); }).then(function(b){ return WebAssembly.compile(b); }); } } catch(e){}
+}
+
+function _glIframeShim(extBase, dir){
+  return '<script>(' + __glframe.toString() + ')(' +
+    JSON.stringify(GL_RAWROOT) + ',' + JSON.stringify(GL_APIBASE) + ',' + JSON.stringify(GL_REF) + ',' +
+    JSON.stringify(extBase || null) + ',' + JSON.stringify(dir ? (dir + '/') : null) + ')<\/script>';
+}
+
+async function loadGitlabGame(g, frame) {
+  const dir = g._gldir; // e.g. 'gmes/2048'
+  // Resolve an asset reference to a repo path. A leading "/" is server-root in
+  // the game's original hosting, which maps to the game folder here (NOT the
+  // repo root) — e.g. "/js/main.js" in gmes/2048 -> gmes/2048/js/main.js.
+  const glAbs = (curDir, ref) => ref.charAt(0) === '/' ? _glJoin(dir, ref.slice(1)) : _glJoin(curDir, ref);
+  const dismiss = () => {
+    const p = document.getElementById('pload'); if (p) p.classList.add('gone');
+    const s = document.getElementById('showAnywayBtn'); if (s) s.style.display = 'none';
+    clearTimeout(window._showAnywayTimer);
+  };
+  const blobCache = new Map();
+  async function blobFor(repoPath, forceType) {
+    if (blobCache.has(repoPath)) return blobCache.get(repoPath);
+    const ext = repoPath.split('.').pop().toLowerCase();
+    const res = await fetch(GL_API(repoPath));
+    if (!res.ok) throw new Error('gl ' + res.status + ' ' + repoPath);
+    if (ext === 'css') {
+      // Rewrite url(...) to absolute raw URLs — a stylesheet resolves relative
+      // url() against its OWN URL, which for a data:/blob: sheet is opaque.
+      const cssDir = repoPath.replace(/\/[^\/]*$/, '');
+      const css = (await res.text()).replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (m, q, u) => {
+        if (/^(https?:|data:|blob:|#|\/\/)/i.test(u)) return m;
+        return 'url(' + GL_API(glAbs(cssDir, u)) + ')';
+      });
+      // Return a data: URL, NOT a blob: URL. A blob URL is created in the PARENT
+      // document; the game runs in a srcdoc iframe with a DIFFERENT opaque origin,
+      // and <link rel=stylesheet> to a cross-origin blob is BLOCKED (stylesheets
+      // require same-origin/CORS — classic <script> does not, which is why JS
+      // blobs worked but CSS didn't, loading games completely unstyled). A data:
+      // URL is origin-agnostic and always loads.
+      const url = 'data:text/css;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(css)));
+      blobCache.set(repoPath, url);
+      return url;
+    }
+    const blob = new Blob([await res.arrayBuffer()], { type: forceType || GL_MIME[ext] || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    blobCache.set(repoPath, url);
+    return url;
+  }
+
+  try {
+    // Most games are <dir>/index.html, but some (Unity/emulator/Flash exports)
+    // have no index.html and use <dir>/<folder>.html — glFetchEntry finds it.
+    let html = await glFetchEntry(dir);
+    if (!/<head[^>]*>/i.test(html)) {
+      html = /<html[^>]*>/i.test(html)
+        ? html.replace(/<html[^>]*>/i, m => m + '<head></head>')
+        : '<head></head>' + html;
+    }
+
+    // Reroute standard libraries hardcoded to a jsDelivr-BLOCKED account (403,
+    // e.g. genizy — Ovo Dimensions loads jquery/howler from it) to jsDelivr's
+    // npm CDN, which is never account-blocked. Must run before the parser stashes
+    // assets (these are absolute URLs the browser would otherwise 403 directly).
+    html = _repairLibRefs(html, glog);
+
+    // Surviving blocked-account refs are the game's own engine/data (e.g. this
+    // folder ships only index.html and points c2runtime.js/data.js at genizy).
+    // Nothing can rescue those, so explain instead of black-screening.
+    const _blkAcct = _blockedAccountIn(html);
+    if (_blkAcct) { _showBlockedNotice(g._key, _blkAcct); return; }
+
+    // Rewrite jsDelivr.net → staticdelivr in the static markup (parser-created
+    // tags); runtime/hardcoded jsDelivr URLs are caught by the __cdnfix shim.
+    html = _cdnStatic(html);
+
+    // Games whose assets live on an external CDN (relative stragglers 404 on
+    // GitLab) get those refs resolved against that CDN as a fallback.
+    const extBase = _glExtBase(html);
+
+    // Swap relative static resources for blob placeholders, fetch them in parallel.
+    const tasks = [];
+    const stash = (src, type) => {
+      if (/^(https?:|data:|blob:|\/\/|#)/i.test(src)) return null;
+      const ph = '__GLB' + tasks.length + '__';
+      // glAbs (not _glJoin) so a root-relative "/js/x" maps to the game folder,
+      // not the repo root — matches the game's original server-root hosting.
+      tasks.push({ ph, path: glAbs(dir, src), type });
+      return ph;
+    };
+    html = html.replace(/(<script\b[^>]*\bsrc=)(["'])(.*?)\2/gi, (m, pre, q, src) => {
+      const ph = stash(src, 'text/javascript'); return ph ? pre + q + ph + q : m;
+    });
+    html = html.replace(/(<link\b[^>]*\bhref=)(["'])(.*?)\2/gi, (m, pre, q, href) => {
+      const ph = stash(href); return ph ? pre + q + ph + q : m;
+    });
+    html = html.replace(/(<img\b[^>]*\bsrc=)(["'])(.*?)\2/gi, (m, pre, q, src) => {
+      const ph = stash(src); return ph ? pre + q + ph + q : m;
+    });
+    let _missing = 0;
+    await Promise.all(tasks.map(async t => {
+      try { t.url = await blobFor(t.path, t.type); }
+      catch (e) {
+        // The file 404s on GitLab. If this game imports from an external CDN,
+        // resolve the straggler there (correct MIME + CORS).
+        const rel = (extBase && t.path.indexOf(dir + '/') === 0) ? t.path.slice(dir.length + 1) : null;
+        if (rel) { t.url = extBase + rel; return; }
+        // Otherwise it's genuinely missing from the (incompletely-mirrored) repo
+        // — these are the "ghost files" games reference but don't ship. A GitLab
+        // raw URL can't rescue a script/stylesheet (text/plain;nosniff → the
+        // browser ORB-blocks it and it can't execute), so swap in an EMPTY data:
+        // resource: no doomed ghost request, the tag "loads" cleanly, the game
+        // continues without the (usually non-essential) file. Images can still
+        // come from raw, which serves them fine.
+        const ext = (t.path.split(/[?#]/)[0].split('.').pop() || '').toLowerCase();
+        if (/^(js|mjs|cjs)$/.test(ext))      t.url = 'data:text/javascript,';
+        else if (ext === 'css')              t.url = 'data:text/css,';
+        else if (/^(png|jpe?g|gif|webp|avif|svg|ico|bmp)$/.test(ext)) t.url = GL_RAW(t.path);
+        else                                 t.url = 'data:,';
+        _missing++;
+        glog('warn', 'missing from repo → skipped (game references a file it doesn\'t ship): ' + t.path);
+      }
+    }));
+    tasks.forEach(t => { html = html.replace(t.ph, () => t.url); });
+    glog('ok', 'GitLab: '+(tasks.length - _missing)+'/'+tasks.length+' in-repo asset(s) blob-loaded'+(_missing?(' · '+_missing+' missing (skipped)'):'')+(extBase?(' · external fallback '+extBase):''));
+
+    const rawBase = GL_RAW(dir) + '/';
+    // __cdnfix (jsDelivr→staticdelivr) runs BEFORE __glframe so __glframe's
+    // GitLab hooks wrap it: a runtime asset resolves GitLab first, else falls
+    // through to the jsDelivr reroute.
+    const shim = _cdnfixShim() + _glIframeShim(extBase, dir);
+    const headInject = _gameLogShim(g.name) + '<base href="' + rawBase + '">' + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}' +
+      'ruffle-player,ruffle-embed,ruffle-object{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important}</style>' +
+      shim;
+    html = html.replace(/(<head[^>]*>)/i, (m) => m + headInject);
+
+    glog('info', 'writing GitLab game into iframe (srcdoc, '+html.length+' bytes)…');
+    frame.onload = () => { frame.onload = null; glog('ok', 'iframe onload — game frame ready'); setTimeout(dismiss, 300); };
+    frame.removeAttribute('src');
+    frame.srcdoc = html;
+    setTimeout(dismiss, 6000);
+  } catch (e) {
+    glog('error', 'GitLab load FAILED:', e.message||e);
+    console.warn('[N3ptune] GitLab game load failed', e);
+    const ltxt = document.getElementById('ltxt');
+    if (ltxt) ltxt.textContent = 'Couldn’t load ' + g.name + '. It may be missing from the GitLab repo.';
+    const sab = document.getElementById('showAnywayBtn');
+    if (sab) sab.style.display = 'none';
+    clearTimeout(window._showAnywayTimer);
+  }
+}
+
+// ── PER-GAME CONSOLE LOGGING ───────────────────────────────────────────────
+// Opening a game logs the full story to the browser console (good and bad):
+// every loader step here in the parent, PLUS everything the game emits inside
+// its iframe — console.*, uncaught errors, failed resource loads, unhandled
+// promise rejections, and load milestones — each line tagged with the game name.
+let _glogTag = '';
+let _glogT0 = 0;
+// Full launch log captured in memory so users WITHOUT devtools (phones, locked-
+// down Chromebooks) can hit "Copy logs" and paste them into the report form.
+let _glogBuf = [];
+const LOG_FORM_URL = 'https://forms.gle/DbvmVCxWjzJyojGB7';
+function _pushLog(prefix, level, args){
+  try{
+    var parts = (args||[]).map(function(a){
+      try{ return (a && a.stack) ? a.stack : (typeof a==='object' ? JSON.stringify(a) : String(a)); }
+      catch(_){ return String(a); }
+    });
+    _glogBuf.push(prefix + ' [' + level + '] ' + parts.join(' '));
+    if(_glogBuf.length > 3000) _glogBuf.shift();
+  }catch(e){}
+}
+function glog(level, ...args){
+  const c = level==='error'?'#fc2651':level==='warn'?'#f59e0b':level==='ok'?'#22c55e':'#60a5fa';
+  const fn = level==='error'?console.error:level==='warn'?console.warn:console.log;
+  const dt = _glogT0 ? (' +'+Math.round(performance.now()-_glogT0)+'ms') : '';
+  fn('%c[N3ptune ▶ '+(_glogTag||'game')+']%c'+dt, 'color:'+c+';font-weight:700', 'color:#6b9ab8', ...args);
+  _pushLog('[N3ptune ▶ '+(_glogTag||'game')+']'+dt, level, args);
+}
+// One-time listener for messages posted by the in-iframe log shim.
+let _glogRelayInstalled = false;
+function _installGameLogRelay(){
+  if(_glogRelayInstalled) return; _glogRelayInstalled = true;
+  window.addEventListener('message', e => {
+    const d = e.data;
+    if(!d || d.__n3game !== 1) return;
+    const fn = d.level==='error'?console.error:d.level==='warn'?console.warn:console.log;
+    const c = d.level==='error'?'#fc2651':d.level==='warn'?'#f59e0b':'#a78bfa';
+    fn('%c    ↳ '+d.tag+' ['+d.level+']', 'color:'+c, ...(d.args||[]));
+    _pushLog('  ↳ '+d.tag, d.level, d.args||[]);
+  });
+}
+// ── Copy logs (works on ANY device, including phones with no devtools) ──
+function copyGameLogs(btn){
+  var text = (_glogBuf && _glogBuf.length) ? _glogBuf.join('\n')
+    : 'No logs captured yet — open a game first, then tap Copy logs.';
+  function flash(ok){
+    if(!btn) return;
+    if(!btn.getAttribute('data-lbl')) btn.setAttribute('data-lbl', btn.textContent);
+    btn.textContent = ok ? 'Copied!' : 'Copy failed';
+    setTimeout(function(){ btn.textContent = btn.getAttribute('data-lbl'); }, 1600);
+  }
+  // 1) Async Clipboard API (needs a secure context — https). 2) execCommand fallback
+  // (works on most mobile browsers from a tap). 3) manual select-all modal.
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(
+      function(){ flash(true); },
+      function(){ if(_legacyCopy(text)) flash(true); else { flash(false); _showLogFallback(text); } }
+    );
+  } else {
+    if(_legacyCopy(text)) flash(true); else { flash(false); _showLogFallback(text); }
+  }
+}
+function _legacyCopy(text){
+  try{
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position='fixed'; ta.style.top='0'; ta.style.left='0'; ta.style.opacity='0';
+    ta.setAttribute('readonly','');
+    document.body.appendChild(ta);
+    ta.focus(); ta.select(); try{ ta.setSelectionRange(0, text.length); }catch(e){}
+    var ok=false; try{ ok = document.execCommand('copy'); }catch(e){ ok=false; }
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+function _showLogFallback(text){
+  var o = document.getElementById('logCopyOverlay');
+  if(!o){
+    o = document.createElement('div'); o.id='logCopyOverlay'; o.className='logcopy-overlay';
+    o.innerHTML =
+      '<div class="logcopy-modal">'
+      + '<div class="logcopy-head"><b>Game logs</b>'
+      + '<button class="logcopy-x" onclick="document.getElementById(\'logCopyOverlay\').classList.remove(\'open\')">×</button></div>'
+      + '<div class="logcopy-sub">Couldn\'t copy automatically. Tap the box, choose <b>Select All</b>, then <b>Copy</b> — and paste it into the form.</div>'
+      + '<textarea id="logCopyText" readonly></textarea>'
+      + '<div class="logcopy-actions">'
+      + '<button class="ptip-btn ghost" onclick="(function(t){t.focus();t.select();try{t.setSelectionRange(0,t.value.length)}catch(e){}; if(_legacyCopy(t.value))this.textContent=\'Copied!\';}.call(this,document.getElementById(\'logCopyText\')))">Select &amp; copy</button>'
+      + '<a class="ptip-btn" href="'+LOG_FORM_URL+'" target="_blank" rel="noopener">Open form</a>'
+      + '</div></div>';
+    document.body.appendChild(o);
+    o.addEventListener('click', function(e){ if(e.target===o) o.classList.remove('open'); });
+  }
+  var ta = o.querySelector('#logCopyText'); ta.value = text;
+  o.classList.add('open');
+  setTimeout(function(){ try{ ta.focus(); ta.select(); ta.setSelectionRange(0, text.length); }catch(e){} }, 60);
+}
+// Script injected FIRST into every game iframe: forwards the game's own console
+// + errors to the parent via postMessage. Self-contained (survives .toString()).
+function _gameLogShim(tag){
+  function shim(TAG){
+    function send(level, args){
+      try{
+        var out=[];
+        for(var i=0;i<args.length;i++){ var a=args[i];
+          try{ out.push(a && a.stack ? a.stack : (typeof a==='object' ? JSON.stringify(a) : String(a))); }
+          catch(_){ out.push(String(a)); } }
+        parent.postMessage({__n3game:1, tag:TAG, level:level, args:out}, '*');
+      }catch(e){}
+    }
+    // Known ad / analytics / anti-adblock / monetization hosts that games embed.
+    // These routinely fail inside a sandboxed iframe (served text/plain → ORB-
+    // blocked, CSP, offline) and the game is completely fine without them, so we
+    // log them as harmless info, NOT as errors — otherwise every launch looks
+    // broken (e.g. cdn.r9x.in/ailogic_gn-math.dev_obf.js on GN-Math games).
+    var NONFATAL = /(?:r9x\.in|ailogic|doubleclick|googlesyndication|googletagmanager|google-analytics|googletagservices|adservice|gampad|adsbygoogle|pagead|securepubads|imasdk|ima3|firebaseio|firebaseinstallations|crazygames|poki|gamemonetize|gamedistribution|onesignal|clarity\.ms|hotjar|cloudflareinsights|sentry|scorecardresearch|adsbygoogle|adsLoader|SDK_ERROR|Ads SDK|monetize)/i;
+    ['log','info','warn','error','debug'].forEach(function(m){
+      var o = console[m] ? console[m].bind(console) : function(){};
+      console[m] = function(){
+        // Ad/analytics SDK chatter (banners, "adsLoaderPromise failed", etc.) is
+        // harmless noise — forward it at a quiet level so real errors stand out.
+        var lvl = (m==='warn')?'warn':(m==='error')?'error':'log';
+        try{ if((lvl==='error'||lvl==='warn') && NONFATAL.test(Array.prototype.join.call(arguments,' '))) lvl='log'; }catch(e){}
+        send(lvl, arguments); return o.apply(console, arguments);
+      };
+    });
+    // Successful sub-resource loads (the "good") AND the window-load milestone.
+    addEventListener('load', function(e){
+      var t=e.target;
+      if(t===window || t===document){ send('ok', ['fully loaded (window load)']); return; }
+      if(t && t.tagName && (t.src||t.href)) send('ok', ['loaded '+(''+t.tagName).toLowerCase()+': '+(t.src||t.href)]);
+    }, true);
+    // Failed sub-resource loads + uncaught errors (the "bad") — but downgrade
+    // known ad/analytics/anti-adblock hosts to harmless info.
+    addEventListener('error', function(e){
+      if(e.target && e.target!==window && (e.target.src||e.target.href)){
+        var u=e.target.src||e.target.href, tag=(''+e.target.tagName).toLowerCase();
+        if(NONFATAL.test(u)) send('log', ['ad/analytics/anti-adblock unavailable — harmless (game unaffected): '+u]);
+        else send('error', ['resource FAILED to load: '+u+' <'+tag+'>']);
+      } else {
+        var em = (e.message||'');
+        // ytgame/ad SDKs throw harmlessly (e.g. postMessage "Invalid target
+        // origin ''" from the absent YouTube host) — the game runs fine.
+        if(/Invalid target origin|target origin ''|postMessage/i.test(em) || NONFATAL.test(em))
+          send('log', ['harmless SDK error (game unaffected): '+em]);
+        else
+          send('error', ['uncaught: '+em+(e.filename?(' @ '+e.filename+':'+e.lineno+':'+e.colno):'')]);
+      }
+    }, true);
+    addEventListener('unhandledrejection', function(e){
+      var r=e.reason, msg=((r&&r.message)?r.message:(r&&r.stack)?r.stack:String(r));
+      if(NONFATAL.test(msg)) send('log', ['ad/analytics promise rejected — harmless']);
+      else send('error', ['unhandled promise rejection: '+msg]);
+    });
+    send('log', ['document parsing started']);
+    addEventListener('DOMContentLoaded', function(){ send('log', ['DOMContentLoaded']); });
+  }
+  return '<script>('+shim.toString()+')('+JSON.stringify(String(tag))+')<\/script>';
+}
+
+// Script injected FIRST into every game iframe: fix new URL() in srcdoc games.
+// A game runs from frame.srcdoc, so document.URL / location.href is "about:srcdoc"
+// — which is NOT a valid base for `new URL(relative, base)` and throws "Failed to
+// construct 'URL': Invalid URL". Unity WebGL loaders do exactly this
+// (`new URL(streamingAssetsUrl, document.URL)`), so the loader dies and the whole
+// game is a black screen. We wrap URL so an about: (or empty) base falls back to
+// document.baseURI — the real absolute URL from our injected <base href>.
+function _srcdocUrlFix(){
+  function shim(){
+    try{
+      var _URL = window.URL;
+      if(!_URL || _URL.__n3fixed) return;
+      function W(url, base){
+        if(base === undefined || base === null) { try { return new _URL(url); } catch(e){ return new _URL(url, document.baseURI); } }
+        var b = base;
+        try{ if(typeof base==='string' && /^about:/i.test(base)) b = document.baseURI; }catch(e){}
+        try{ return new _URL(url, b); }
+        catch(e){ try{ return new _URL(url, document.baseURI); }catch(_){ return new _URL(url); } }
+      }
+      W.prototype = _URL.prototype;
+      W.createObjectURL = function(){ return _URL.createObjectURL.apply(_URL, arguments); };
+      W.revokeObjectURL = function(){ return _URL.revokeObjectURL.apply(_URL, arguments); };
+      if(_URL.canParse) W.canParse = function(){ try{ return _URL.canParse.apply(_URL, arguments); }catch(e){ return false; } };
+      W.__n3fixed = true;
+      window.URL = W;
+    }catch(e){}
+  }
+  return '<script>('+shim.toString()+')()<\/script>';
+}
+
+// Script injected into every game iframe: stub the YouTube-Playables SDK.
+// Many games embed ytgame.js, whose init posts to the (non-existent) YouTube host
+// frame with an empty targetOrigin → "Invalid target origin ''" → it throws
+// before defining `ytgame`, so the game's `ytgame.game.gameReady()` etc. hit
+// `ytgame is not defined` and the game hangs (e.g. Unity stuck at ~90%). There's
+// no real YouTube host in our sandbox, so we predefine a universal no-op stub: a
+// Proxy where every access returns another callable no-op and every call returns
+// a resolved promise. Games that don't use ytgame never touch it (harmless).
+function _ytgameStub(){
+  function shim(){
+    try{
+      if(window.__n3ytstub) return; window.__n3ytstub = true;
+      var noop = function(){ return Promise.resolve(); };
+      var handler = {
+        get: function(t, p){
+          if(p==='SDK_VERSION') return '1.0-n3ptune-stub';
+          if(p==='IN_PLAYABLES_ENV') return false;
+          if(p==='then') return undefined; // don't look thenable
+          if(p==='toString') return function(){ return '[ytgame stub]'; };
+          if(p in t) return t[p];
+          return new Proxy(noop, handler);
+        },
+        apply: function(){ return Promise.resolve(); }
+      };
+      var stub = new Proxy(noop, handler);
+      try{ Object.defineProperty(window, 'ytgame', { value: stub, writable:false, configurable:true }); }
+      catch(e){ window.ytgame = stub; }
+      try{ window.YTGame = stub; }catch(e){}
+    }catch(e){}
+  }
+  return '<script>('+shim.toString()+')()<\/script>';
+}
+
+// Old Unity 5 WebGL exports use the "webgl-content" template: a FIXED-size stage
+// (typically 900×600) that's absolutely centered on the page and never resizes.
+// In our full-viewport frame that renders as a tiny game marooned in black (e.g.
+// ugs_slope). Newer Unity builds use a #unity-container that fills on its own, so
+// we DON'T touch those — this shim only matches `.webgl-content` and scales that
+// stage to fit the frame, preserving aspect ratio (letterboxed, no distortion),
+// re-fitting on resize and for ~12s while the template builds its DOM async.
+function _unityFitShim(){
+  function shim(){
+    try{
+      function fit(){
+        var wc = document.querySelector('.webgl-content');
+        if(!wc) return;
+        var gc = wc.querySelector('#gameContainer') || wc;
+        var cw = gc.offsetWidth, ch = gc.offsetHeight;
+        if(!cw || !ch) return;
+        var s = Math.min(window.innerWidth / cw, window.innerHeight / ch);
+        if(!isFinite(s) || s <= 0) return;
+        wc.style.position = 'fixed';
+        wc.style.top = '50%'; wc.style.left = '50%';
+        wc.style.margin = '0';
+        wc.style.transformOrigin = 'center center';
+        wc.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+      }
+      var n = 0, iv = setInterval(function(){ fit(); if(++n > 40) clearInterval(iv); }, 300);
+      window.addEventListener('resize', fit);
+      window.addEventListener('load', fit);
+      if(document.readyState !== 'loading') fit();
+      else document.addEventListener('DOMContentLoaded', fit);
+    }catch(e){}
+  }
+  return '<script>('+shim.toString()+')()<\/script>';
+}
+
+// Some mirrors (notably freebuisness/html, our GN source) rewrote a few in-game
+// asset URLs to names that DON'T EXIST on the CDN, so the referenced <script>
+// 404s and the game dies with "<Global> is not defined" (black screen). These
+// are systematic, class-wide rewrites (not one-off typos): e.g. every
+// YouTube-Playables (bubbls) title asks for `unarchiver2.min.js`, but the repo
+// only ships `unarchiver.min.js`, so the decompressor never loads →
+// "Unarchiver is not defined". We repair the ghost reference in the fetched HTML
+// before srcdoc injection. Each pattern's LHS is a name that never exists on the
+// CDN, so the rewrite is always safe. Add future ghost-name fixes here.
+const GHOST_REF_FIXES = [
+  [/unarchiver2\.min\.js/g, 'unarchiver.min.js'],
+];
+function _repairGhostRefs(html, log){
+  for (const [re, to] of GHOST_REF_FIXES) {
+    if (re.test(html)) { html = html.replace(re, to); if (log) log('info', 'repaired ghost asset ref → '+to); }
+    re.lastIndex = 0;
+  }
+  return html;
+}
+
+// Some ripped games hardcode absolute jsDelivr /gh/ URLs to a WHOLE ACCOUNT that
+// jsDelivr has since blocked (403 "User <x> is blocked" — like gn-math, genizy).
+// When those files are standard third-party LIBRARIES (jQuery, Howler, …), the
+// exact same library is on jsDelivr's npm CDN, which is never account-blocked
+// and is allowed by the no-github rule. So we reroute well-known library refs
+// from any /gh/ path to their npm copy: this un-breaks e.g. "jQuery is not
+// defined" cascades (Ovo Dimensions loads jquery+howler from the blocked genizy
+// account). Each rewrite maps by the library's basename only, so a game's own
+// bundled scripts (c2runtime.js, game.js, …) are never touched — those remain
+// unsupported if their account is blocked (no allowed mirror exists). The npm
+// version is taken from the filename when present (jquery-3.4.1.min.js →
+// jquery@3.4.1); libraries without a version in the name are pinned to a stable
+// major (their APIs are backward-compatible for game usage). Verified 200 on
+// jsDelivr npm. Applied in BOTH loaders (GN/Seraph srcdoc + GitLab).
+const _JSD = 'https://cdn.jsdelivr.net/npm/';
+const LIB_CDN_FIXES = [
+  // jQuery with a version in the filename → same version on npm
+  [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/jquery-(\d+(?:\.\d+)+)(?:\.min)?\.js/gi,
+    (_m, ver) => _JSD + 'jquery@' + ver + '/dist/jquery.min.js'],
+  // Howler (no version in filename) → stable 2.x
+  [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/howler(?:\.min)?\.js/gi,
+    () => _JSD + 'howler@2.2.4/dist/howler.min.js'],
+  // html2canvas (no version in filename) → stable 1.x
+  [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/html2canvas(?:\.min)?\.js/gi,
+    () => _JSD + 'html2canvas@1.4.1/dist/html2canvas.min.js'],
+  // tween.js (Tween.js, no version in filename) → stable @tweenjs 18.x (TWEEN global)
+  [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/Tween(?:\.min)?\.js/gi,
+    () => _JSD + '@tweenjs/tween.js@18.6.4/dist/tween.umd.min.js'],
+];
+function _repairLibRefs(html, log){
+  for (const [re, to] of LIB_CDN_FIXES) {
+    if (re.test(html)) {
+      re.lastIndex = 0;
+      html = html.replace(re, (...a) => { const u = to(...a); if (log) log('info', 'rerouted blocked-account library → ' + u); return u; });
+    }
+    re.lastIndex = 0;
+  }
+  return html;
+}
+
+// ── Blocked-account games ────────────────────────────────────────────────────
+// jsDelivr blocks some whole GitHub accounts (403, body "User <x> is blocked").
+// A game whose OWN engine/data lives on such an account is unrecoverable: every
+// mirror 403s it, staticdelivr 404s the account, and no GitLab copy exists. It
+// used to just black-screen. Now we detect it and say so.
+//
+// Detection runs AFTER _repairLibRefs, so a game that merely pulled jQuery/Howler
+// from a blocked account is NOT flagged — those refs have already been rerouted
+// to npm and the game works. Only genuinely-unfixable refs (c2runtime.js,
+// data.js, spritesheets, …) remain to match. The match requires a /gh/<acct>/
+// path, so a name-alike such as the ad script cdn.r9x.in/ailogic_gn-math.dev_obf.js
+// never trips it.
+const BLOCKED_ACCOUNTS = ['gn-math', 'genizy'];
+const _BLOCKED_RE = new RegExp('/gh/(' + BLOCKED_ACCOUNTS.join('|') + ')[/@]', 'i');
+const BLOCKED_KEY = 'n3ptune_blocked';
+const blockedGames = new Map(); // key → account name
+
+function loadBlockedFromStorage(){
+  try {
+    const raw = localStorage.getItem(BLOCKED_KEY);
+    if (raw) for (const [k, a] of Object.entries(JSON.parse(raw))) blockedGames.set(k, a);
+  } catch(e) {}
+}
+function persistBlocked(){
+  try { localStorage.setItem(BLOCKED_KEY, JSON.stringify(Object.fromEntries(blockedGames))); } catch(e) {}
+}
+// Eagerly, at parse time: the first render() runs before loadPlayedFromStorage(),
+// and already-known blocked games must be gray on that first paint.
+loadBlockedFromStorage();
+// Returns the blocked account this HTML depends on, or null.
+function _blockedAccountIn(html){
+  const m = _BLOCKED_RE.exec(html);
+  if (m) return m[1].toLowerCase();
+  // Also catch the case where the fetched document IS jsDelivr's block notice.
+  const b = /User\s+([A-Za-z0-9_.-]+)\s+is blocked\./.exec(html);
+  return b ? b[1].toLowerCase() : null;
+}
+// Abort the launch and explain, instead of leaving a black frame.
+function _showBlockedNotice(key, acct){
+  if (key) { blockedGames.set(key, acct); persistBlocked(); }
+  glog('error', 'BLOCKED ACCOUNT: game assets live on jsDelivr-blocked "' + acct + '" — unplayable, no allowed mirror exists');
+  const frame = document.getElementById('gframe');
+  if (frame) { frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; }
+  clearTimeout(window._showAnywayTimer);
+  const sab = document.getElementById('showAnywayBtn'); if (sab) sab.style.display = 'none';
+  const ntb = document.getElementById('newTabBtn');     if (ntb) ntb.style.display = 'none';
+  const tip = document.getElementById('ptip');          if (tip) tip.style.display = 'none';
+  const pload = document.getElementById('pload');
+  if (pload) { pload.classList.remove('gone'); pload.classList.add('notice'); }
+  const ltxt = document.getElementById('ltxt');
+  // Always presented to the user as "gn-math" — genizy is an upstream detail
+  // players don't care about (the detection still matches the real account).
+  if (ltxt) ltxt.textContent = 'Sorry, games with assets from gn-math are currently unplayable because of jsDelivr blocking requests from the gn-math repository.';
+  // Reflect the new gray state in the grid behind the player.
+  try { render(); } catch(e) {}
+}
+
+async function launch(key) {
+  playedGames.add(key);
+  persistPlayed();
+  const g = findByKey(key);
+  if (!g||!g.url) return;
+  activeGame={key, src:g._src, name:g.name, url:g.url, gnHtml:null};
+  _glogTag = g.name; _glogT0 = performance.now(); _installGameLogRelay();
+  _glogBuf = [
+    'N3ptune log — ' + g.name + ' [' + key + ']  (' + g._src + ')',
+    'url: ' + g.url,
+    'when: ' + new Date().toISOString(),
+    'device: ' + navigator.userAgent,
+    '─────────────────────────────────────────'
+  ];
+  console.log('%c─────────────────────────────────────────', 'color:#2563eb');
+  glog('info', '▶ launching   src='+g._src+'   key='+key);
+  glog('info', 'url:', g.url);
+  document.getElementById('ptitle').textContent=g.name;
+  document.getElementById('lsrc').textContent=g._src==='gn'?'GN-Math':g._src==='seraph'?'Seraph':'UGS';
+  document.getElementById('lsrc').className='lsrc '+g._src;
+  document.getElementById('ltxt').textContent='Loading '+g.name+'...';
+  document.getElementById('showAnywayBtn').style.display='none';
+  clearTimeout(window._showAnywayTimer);
+  window._showAnywayTimer = setTimeout(() => {
+    const btn = document.getElementById('showAnywayBtn');
+    const pload = document.getElementById('pload');
+    if (btn && pload && !pload.classList.contains('gone')) btn.style.display='';
+  }, 5000);
+  document.getElementById('player').classList.add('open');
+  const tip = document.getElementById('ptip');
+  if (tip) tip.style.display = '';
+  document.getElementById('pload').classList.remove('gone');
+  document.getElementById('pload').classList.remove('notice');
+  // Already known to live on a jsDelivr-blocked account — explain, don't re-fetch.
+  if (blockedGames.has(key)) { _showBlockedNotice(key, blockedGames.get(key)); return; }
+  const frame=document.getElementById('gframe');
+  const ntb=document.getElementById('newTabBtn');
+  // New tab button: fetch HTML and write into new window with base tag
+  ntb.style.display = '';
+  ntb.onclick=async()=>{
+    const w=window.open('about:blank','_blank');
+    if(!w) return;
+    try{
+      let html=activeGame?.gnHtml;
+      if(!html){
+        const res=await fetch(g.url+'?t='+Date.now());
+        html=await res.text();
+      }
+      const baseUrl=g.url.replace(/\/[^\/]*$/,'/');
+      const injected=html.replace(/(<head[^>]*>)/i,`$1<base href="${baseUrl}">`);
+      w.document.open();w.document.write(injected);w.document.close();
+    }catch(e){
+      // Last resort: load the fetched HTML through a Blob typed as text/html so
+      // the new tab renders it as a page. Navigating straight to g.url would
+      // show raw code (the CDN serves text/plain; nosniff).
+      try{
+        const html=activeGame?.gnHtml;
+        if(html){
+          const blob=new Blob([html],{type:'text/html'});
+          w.location.href=URL.createObjectURL(blob);
+        } else { w.close(); }
+      }catch(_){ w.close(); }
+    }
+  };
+
+  // UGS games are hosted on GitLab — route through the GitLab-API proxy loader.
+  // (New Tab can't work for these: GitLab serves text/plain;nosniff so a real
+  // navigation would show raw source, not run the game.)
+  if(g._gldir){
+    ntb.style.display='none';
+    glog('info', 'loader: GitLab folder proxy   dir='+g._gldir);
+    await loadGitlabGame(g, frame);
+    return;
+  }
+
+  // Non-jsdelivr external URLs: open in new tab
+  if(g.url.startsWith('http')&&!g.url.includes('jsdelivr')){
+    glog('warn', 'external (non-jsDelivr) URL → opening in a new tab');
+    window.open(g.url,'_blank'); closeGame(); return;
+  }
+
+  glog('info', 'loader: srcdoc (jsDelivr fetch)');
+  // Fetch and write into iframe — with CDN mirror fallback and content validation
+  async function tryFetch(url) {
+    // Try the mirror resolveCdn() already measured as fastest FIRST, then the
+    // rest — otherwise a slow/blocked leading mirror can burn up to 8s before we
+    // fall through, making every game feel slow to open.
+    const mirrors = [_cdnHost, ...CDN_MIRRORS_ALL.filter(m => m !== _cdnHost)];
+    for (const mirror of mirrors) {
+      try {
+        const u = _swapMirror(url, mirror) + '?t=' + Date.now();
+        const res = await fetch(u, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) { glog('warn', 'mirror '+mirror+' → HTTP '+res.status+', trying next'); continue; }
+        const text = await res.text();
+        // Validate we got real HTML content, not an error page
+        if (text.length < 100) { glog('warn', 'mirror '+mirror+' → too small ('+text.length+'b), trying next'); continue; }
+        if (text.includes('Package size exceeded') || text.includes('package size exceeded')) { glog('warn', 'mirror '+mirror+' → "Package size exceeded", trying next'); continue; }
+        if (!text.includes('<') ) { glog('warn', 'mirror '+mirror+' → not HTML, trying next'); continue; }
+        return { text, mirror };
+      } catch(e) { glog('warn', 'mirror '+mirror+' → '+(e.name||'error')+' ('+(e.message||'')+'), trying next'); continue; }
+    }
+    return null;
+  }
+
+  // Reset iframe to a clean about:blank state before writing new game HTML.
+  // This prevents the cross-origin/reuse bug where writing to a previously-used
+  // iframe causes contentDocument to become inaccessible or stale.
+  async function resetFrame(f) {
+    return new Promise(resolve => {
+      f.onload = () => { f.onload = null; resolve(); };
+      f.src = 'about:blank';
+    });
+  }
+
+  try{
+    const result = await tryFetch(g.url);
+    if (!result) throw new Error('All mirrors failed');
+    const rawHtml = result.text;
+    glog('ok', 'fetched HTML from '+result.mirror+' ('+rawHtml.length+' bytes)');
+    // Route GN-Math / Seraph off jsDelivr.net (account blocks) onto staticdelivr:
+    // rewrite static markup, point the base there, and inject __cdnfix for any
+    // runtime/hardcoded jsDelivr URLs. Same one patch as the GitLab loader.
+    const gameHtml = _cdnStatic(patchHtml(rawHtml));
+    activeGame.gnHtml = gameHtml;
+    const baseUrl = _cdnStatic(_swapMirror(g.url, result.mirror).replace(/\/[^\/]*$/, '/'));
+    let injected = gameHtml;
+    if (!/<head/i.test(injected)) {
+      injected = '<html><head></head><body>' + injected + '</body></html>';
+    }
+    // Inject base href, viewport meta, and a full-size body reset so the game
+    // fills the iframe correctly (without these, the game page has no viewport
+    // declaration and default browser margins crush the layout).
+    // BUT respect a game's OWN <base>: many GN/Seraph games are repackaged from
+    // other repos and declare <base href="…theirrepo/"> so their relative assets
+    // (e.g. the game.js that defines runGame) resolve there. A <base> injected
+    // FIRST wins over theirs (first base element wins) and 404s their scripts —
+    // black screen. So only add our base when the game declares none.
+    injected = _repairGhostRefs(injected, glog);
+    injected = _repairLibRefs(injected, glog);
+    // Whatever blocked-account refs survive the repairs are the game's own
+    // engine/data — unrecoverable. Stop here rather than write a black frame.
+    const _blkAcct = _blockedAccountIn(injected);
+    if (_blkAcct) { _showBlockedNotice(key, _blkAcct); return; }
+    const hasOwnBase = /<base\b[^>]*\bhref\s*=/i.test(injected);
+    glog('info', hasOwnBase ? 'using the game\'s OWN <base> (not injecting ours)' : ('injected <base> '+baseUrl));
+    const headInject = _gameLogShim(g.name) + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() +
+      (hasOwnBase ? '' : `<base href="${baseUrl}">`) +
+      `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+      `<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}` +
+      `ruffle-player,ruffle-embed,ruffle-object{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important}</style>` +
+      _cdnfixShim();
+    injected = injected.replace(/(<head[^>]*>)/i, `$1${headInject}`);
+    glog('info', 'writing game into iframe (srcdoc, '+injected.length+' bytes)…');
+    // Render the fetched HTML via srcdoc so the browser ALWAYS parses it as
+    // text/html. jsDelivr now serves these game files as
+    //   Content-Type: text/plain; charset=utf-8
+    //   x-content-type-options: nosniff
+    // which made the old direct-navigation fallback (frame.src = url) display
+    // the raw source code instead of running the game. srcdoc also avoids the
+    // fragile about:blank reset + contentDocument.write() dance that could
+    // throw and drop us into that broken fallback.
+    const dismissLoader = () => {
+      document.getElementById('pload').classList.add('gone');
+      document.getElementById('showAnywayBtn').style.display='none';
+      clearTimeout(window._showAnywayTimer);
+    };
+    frame.onload = () => { frame.onload = null; glog('ok', 'iframe onload — game frame ready'); setTimeout(dismissLoader, 300); };
+    frame.removeAttribute('src');
+    frame.srcdoc = injected;
+    // Safety net: dismiss the loader even if onload never fires
+    setTimeout(dismissLoader, 4000);
+  }catch(e){
+    // Fetch failed entirely (network / CORS blocked). Do NOT point the iframe
+    // straight at the URL — the CDN serves text/plain;nosniff, so the browser
+    // would render the raw code. Surface an error and keep the "New Tab" path.
+    glog('error', 'load FAILED:', e.message||e);
+    const ltxt = document.getElementById('ltxt');
+    if (ltxt) ltxt.textContent = 'Couldn’t load '+g.name+'. Try the New Tab button ↗';
+    const sab = document.getElementById('showAnywayBtn');
+    if (sab) sab.style.display='none';
+    clearTimeout(window._showAnywayTimer);
+  }
+}
+
+function showGameAnyway() {
+  document.getElementById('pload').classList.add('gone');
+  document.getElementById('showAnywayBtn').style.display='none';
+  clearTimeout(window._showAnywayTimer);
+}
+
+function closeGame(){
+  document.getElementById('player').classList.remove('open');
+  const f=document.getElementById('gframe');
+  // The game runs from srcdoc, and srcdoc OVERRIDES src — so setting src alone
+  // leaves the game document alive and its audio/timers running after you exit.
+  // Clear srcdoc first, then navigate the frame to about:blank so the document
+  // (AudioContext, <audio>, Unity/emulator sound, intervals) is fully destroyed.
+  f.removeAttribute('srcdoc');
+  f.src='about:blank';
+  document.getElementById('newTabBtn').style.display='';
+  activeGame=null;
+}
+
+function reloadGame(){if(!activeGame)return;document.getElementById('pload').classList.remove('gone');launch(activeGame.key);}
+
+function fsGame(){
+  const f=document.getElementById('gframe');
+  (f.requestFullscreen||f.webkitRequestFullscreen||f.mozRequestFullScreen||(()=>{})).call(f);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  PROGRESS TRACKING & SAVE/LOAD
+// ═══════════════════════════════════════════════════════════
+const SAVE_KEY = 'n3ptune_save';
+const playedGames = new Set();
+
+// Persist played set to localStorage
+function persistPlayed() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify([...playedGames])); } catch(e) {}
+}
+
+// Load played set from localStorage on startup
+function loadPlayedFromStorage() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) { JSON.parse(raw).forEach(k => playedGames.add(k)); }
+  } catch(e) {}
+  renderSavedList();
+}
+
+function renderSavedList() {
+  const el = document.getElementById('savedList');
+  if (!el) return; // element not present in this layout, that's fine
+  const unified = getUnified();
+  const played = unified.filter(g => playedGames.has(g._key));
+  if (!played.length) {
+    el.innerHTML = '<div style="padding:5px 13px;font-size:12.1px;color:var(--muted);font-style:italic">No saves yet</div>';
+    return;
+  }
+  el.innerHTML = played.map(g => {
+    const dotClass = g._src;
+    return `<div class="sitem" onclick="launch('${g._key}')">
+      <span class="gsrc-dot ${dotClass}" style="width:6px;height:6px;flex-shrink:0"></span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.name)}</span>
+    </div>`;
+  }).join('');
+}
+
+function showN3Toast(msg, ok=true) {
+  let t = document.getElementById('n3_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'n3_toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:rgba(7,17,32,0.97);border:1px solid rgba(96,165,250,0.22);border-radius:10px;padding:11px 18px;font-family:\'Fredoka\',sans-serif;font-size:13.8px;font-weight:700;letter-spacing:.03em;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;transition:opacity .25s;pointer-events:none;max-width:280px;line-height:1.5;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.color = ok ? '#4ade80' : '#f87171';
+  t.style.opacity = '1';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
+function saveData() {
+  try {
+    const unified = getUnified();
+    const played = unified.filter(g => playedGames.has(g._key));
+    const payload = {
+      version: 2,
+      savedAt: new Date().toISOString(),
+      site: 'N3ptune',
+      games: played.map(g => ({
+        key: g._key, name: g.name, src: g._src, url: g.url, cover: g.cover || null,
+      })),
+      settings: {
+        theme: localStorage.getItem('n3_theme') || 'default',
+        wallpaper: localStorage.getItem('n3_wallpaper') || null,
+        cloakTitle: localStorage.getItem('n3_cloak_title') || null,
+        cloakIcon: localStorage.getItem('n3_cloak_icon') || null,
+      }
+    };
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify([...playedGames])); } catch(e) {}
+    const json = JSON.stringify(payload, null, 2);
+    const a = document.createElement('a');
+    a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+    a.download = 'n3ptune-save-' + new Date().toISOString().slice(0,10) + '.n3pt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    renderSavedList();
+    showN3Toast('✅ Saved! (' + played.length + ' game' + (played.length===1?'':'s') + ')');
+  } catch(err) {
+    showN3Toast('❌ Save failed: ' + err.message, false);
+  }
+}
+
+function loadData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.n3pt,.json';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.addEventListener('change', function() {
+    const file = input.files[0];
+    document.body.removeChild(input);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const payload = JSON.parse(ev.target.result);
+        const keys = (payload.games || []).map(g => g.key);
+        keys.forEach(k => playedGames.add(k));
+        persistPlayed();
+        if (payload.settings) {
+          const s = payload.settings;
+          if (s.theme) { localStorage.setItem('n3_theme', s.theme); applyTheme(s.theme); }
+          if (s.wallpaper) { localStorage.setItem('n3_wallpaper', s.wallpaper); setWallpaper(s.wallpaper); }
+          if (s.cloakTitle) { localStorage.setItem('n3_cloak_title', s.cloakTitle); document.title = s.cloakTitle; }
+          if (s.cloakIcon) {
+            localStorage.setItem('n3_cloak_icon', s.cloakIcon);
+            let link = document.querySelector("link[rel*='icon']");
+            if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+            link.href = s.cloakIcon;
+          }
+        }
+        renderSavedList();
+        showN3Toast('✅ Loaded! ' + keys.length + ' game' + (keys.length===1?'':'s') + ' restored.');
+      } catch(err) {
+        showN3Toast('❌ Invalid save file.', false);
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
+
+// ── PAGE NAVIGATION ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const sb = document.getElementById('sb-'+name);
+  if(sb) sb.classList.add('active');
+  const topbar = document.getElementById('topbar');
+  const pt = document.getElementById('page-title');
+  const canvas = document.getElementById('hero-canvas');
+  if(canvas) { name==='home' ? canvas._startAnim&&canvas._startAnim() : canvas._stopAnim&&canvas._stopAnim(); }
+  if(name==='home'){
+    topbar.style.display='none';
+    renderHome();
+  } else if(name==='games'){
+    topbar.style.display='none'; // games page has its own built-in topbar
+    render();
+  } else {
+    topbar.style.display='flex';
+    if(pt) pt.textContent = 'Settings';
+  }
+  if(name==='settings'){ buildThemeGrid(); loadCloakInputs(); loadWallpaperPreview(); buildCdnSelect(); }
+}
+
+// ── HOME SEARCH ──
+document.getElementById('homeSearch').addEventListener('input', e=>{
+  const q = e.target.value.trim();
+  activeSearch = q;
+  activeView = 'all';
+  showPage('games');
+});
+document.getElementById('homeSearch').addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&e.target.value.trim()) showPage('games');
+});
+
+// ── GAMES PAGE SEARCH ──
+document.addEventListener('DOMContentLoaded', ()=>{
+  const gs = document.getElementById('gamesSearch');
+  if(gs){
+    gs.addEventListener('input', e=>{
+      activeSearch = e.target.value.trim();
+      activeView = 'all';
+      render();
+    });
+    gs.addEventListener('keydown', e=>{
+      if(e.key==='Escape'){ gs.value=''; activeSearch=''; render(); }
+    });
+  }
+});
+
+
+loadAll().then(() => { loadPlayedFromStorage(); initHeroCanvas(); loadTheme(); loadWallpaper(); loadCloak(); });
+
+// u2500u2500 Mobile touch drag scroll u2500u2500
+(function(){
+
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════
+
+const THEMES = [
+  { id:'default', label:'Default', bg:'#050d1a', panel:'#071120', accent:'#2563eb', accent2:'#60a5fa', text:'#e8f4ff' },
+  { id:'midnight', label:'Midnight', bg:'#0a0a14', panel:'#10102a', accent:'#7c3aed', accent2:'#a78bfa', text:'#ede9fe' },
+  { id:'forest', label:'Forest', bg:'#081208', panel:'#0d1f0d', accent:'#16a34a', accent2:'#4ade80', text:'#dcfce7' },
+  { id:'crimson', label:'Crimson', bg:'#120808', panel:'#1f0d0d', accent:'#dc2626', accent2:'#f87171', text:'#fee2e2' },
+  { id:'slate', label:'Slate', bg:'#0f1117', panel:'#1a1d2e', accent:'#475569', accent2:'#94a3b8', text:'#f1f5f9' },
+  { id:'ocean', label:'Ocean', bg:'#020d1a', panel:'#031526', accent:'#0891b2', accent2:'#22d3ee', text:'#e0f7fa' },
+];
+
+function buildThemeGrid() {
+  const grid = document.getElementById('themeGrid');
+  if (!grid) return;
+  const current = localStorage.getItem('n3_theme') || 'default';
+  grid.innerHTML = THEMES.map(t => `
+    <div class="theme-swatch${t.id===current?' active':''}" onclick="applyTheme('${t.id}')"
+      style="background:linear-gradient(135deg,${t.bg} 40%,${t.accent} 100%)">
+      <span>${t.label}</span>
+    </div>`).join('');
+}
+
+function applyTheme(id) {
+  const t = THEMES.find(x=>x.id===id);
+  if (!t) return;
+  const root = document.documentElement.style;
+  root.setProperty('--bg', t.bg);
+  root.setProperty('--panel', t.panel);
+  root.setProperty('--panel2', t.panel);
+  root.setProperty('--accent', t.accent);
+  root.setProperty('--accent2', t.accent2);
+  root.setProperty('--text', t.text);
+  localStorage.setItem('n3_theme', id);
+  buildThemeGrid();
+}
+
+function loadTheme() {
+  const id = localStorage.getItem('n3_theme');
+  if (id && id !== 'default') applyTheme(id);
+}
+
+// ── Wallpaper ──
+function applyWallpaperUrl() {
+  const url = document.getElementById('wpUrl')?.value?.trim();
+  if (!url) return;
+  setWallpaper(url);
+}
+
+function setWallpaper(url) {
+  document.body.style.backgroundImage = `url('${url}')`;
+  document.body.style.backgroundSize = 'cover';
+  document.body.style.backgroundPosition = 'center';
+  document.body.style.backgroundAttachment = 'fixed';
+  localStorage.setItem('n3_wallpaper', url);
+  const prev = document.getElementById('wpPreview');
+  if (prev) { prev.src = url; prev.classList.add('show'); }
+}
+
+function clearWallpaper() {
+  document.body.style.backgroundImage = '';
+  document.body.style.backgroundSize = '';
+  document.body.style.backgroundPosition = '';
+  document.body.style.backgroundAttachment = '';
+  localStorage.removeItem('n3_wallpaper');
+  const prev = document.getElementById('wpPreview');
+  if (prev) { prev.src=''; prev.classList.remove('show'); }
+  const inp = document.getElementById('wpUrl');
+  if (inp) inp.value = '';
+}
+
+function handleWallpaperFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    setWallpaper(e.target.result);
+    const inp = document.getElementById('wpUrl');
+    if (inp) inp.value = '(uploaded image)';
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadWallpaper() {
+  const url = localStorage.getItem('n3_wallpaper');
+  if (url) setWallpaper(url);
+}
+
+// Drag & drop
+document.addEventListener('DOMContentLoaded', () => {
+  const drop = document.getElementById('wpDrop');
+  if (!drop) return;
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        setWallpaper(ev.target.result);
+        const inp = document.getElementById('wpUrl');
+        if (inp) inp.value = '(uploaded image)';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+});
+
+// ── Tab Cloak ──
+function applyCloak() {
+  const title = document.getElementById('cloakTitle')?.value?.trim();
+  const icon = document.getElementById('cloakIcon')?.value?.trim();
+  if (title) {
+    document.title = title;
+    localStorage.setItem('n3_cloak_title', title);
+  }
+  if (icon) {
+    let link = document.querySelector("link[rel*='icon']");
+    if (!link) { link = document.createElement('link'); link.rel='icon'; document.head.appendChild(link); }
+    link.href = icon;
+    localStorage.setItem('n3_cloak_icon', icon);
+  }
+}
+
+function resetCloak() {
+  document.title = 'N3ptune';
+  const link = document.querySelector("link[rel*='icon']");
+  if (link) link.href = '/favicon.ico';
+  localStorage.removeItem('n3_cloak_title');
+  localStorage.removeItem('n3_cloak_icon');
+  const t = document.getElementById('cloakTitle');
+  const i = document.getElementById('cloakIcon');
+  if (t) t.value = '';
+  if (i) i.value = '';
+}
+
+function loadCloak() {
+  const title = localStorage.getItem('n3_cloak_title');
+  const icon = localStorage.getItem('n3_cloak_icon');
+  if (title) { document.title = title; const el = document.getElementById('cloakTitle'); if(el) el.value=title; }
+  if (icon) {
+    let link = document.querySelector("link[rel*='icon']");
+    if (!link) { link = document.createElement('link'); link.rel='icon'; document.head.appendChild(link); }
+    link.href = icon;
+    const el = document.getElementById('cloakIcon'); if(el) el.value=icon;
+  }
+}
+
+// Populate settings when opening the page — handled inside showPage above
+
+function loadCloakInputs() {
+  const t = localStorage.getItem('n3_cloak_title');
+  const i = localStorage.getItem('n3_cloak_icon');
+  const te = document.getElementById('cloakTitle');
+  const ie = document.getElementById('cloakIcon');
+  if (te && t) te.value = t;
+  if (ie && i) ie.value = i;
+}
+
+function loadWallpaperPreview() {
+  const url = localStorage.getItem('n3_wallpaper');
+  const prev = document.getElementById('wpPreview');
+  const inp = document.getElementById('wpUrl');
+  if (url && prev) {
+    if (url.startsWith('data:')) {
+      prev.src = url; prev.classList.add('show');
+      if (inp) inp.value = '(uploaded image)';
+    } else {
+      prev.src = url; prev.classList.add('show');
+      if (inp) inp.value = url;
+    }
+  }
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+//  N3PT PANIC
+// ═══════════════════════════════════════════════════════════
+(function(){
+  const PANIC_KEY = 'n3_panic';
+  let panicWindow = null;
+  let panicVisible = false;
+  let captureActive = false;
+  let capturedCombo = null;
+
+  function getPanicConfig() {
+    try { return JSON.parse(localStorage.getItem(PANIC_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function setPanicConfig(cfg) {
+    localStorage.setItem(PANIC_KEY, JSON.stringify(cfg));
+  }
+
+  function comboToString(e) {
+    const parts = [];
+    if (e.ctrlKey) parts.push('ctrl');
+    if (e.altKey) parts.push('alt');
+    if (e.shiftKey) parts.push('shift');
+    if (e.metaKey) parts.push('meta');
+    const key = e.key.toLowerCase();
+    if (!['control','alt','shift','meta'].includes(key)) parts.push(key);
+    return parts.join('+');
+  }
+
+  function matchesCombo(e, combo) {
+    return combo && comboToString(e) === combo;
+  }
+
+  // Preload: open a tiny 1x1 off-screen window so the page loads in the background
+  function preloadPanic(url) {
+    if (panicWindow && !panicWindow.closed) panicWindow.close();
+    const features = 'width=1,height=1,left=-9999,top=-9999,menubar=no,toolbar=no,location=no,status=no';
+    panicWindow = window.open(url, 'n3ptpanic', features);
+    panicVisible = false;
+  }
+
+  // Show: resize the preloaded window to fullscreen and focus it
+  function showPanic() {
+    if (!panicWindow || panicWindow.closed) {
+      const cfg = getPanicConfig();
+      if (cfg.url) preloadPanic(cfg.url);
+      return;
+    }
+    try {
+      panicWindow.moveTo(0, 0);
+      panicWindow.resizeTo(screen.availWidth, screen.availHeight);
+      panicWindow.focus();
+      panicVisible = true;
+    } catch(e) {}
+  }
+
+  // Hide: shrink back to 1x1 off-screen and refocus N3ptune
+  function hidePanic() {
+    if (!panicWindow || panicWindow.closed) return;
+    try {
+      panicWindow.resizeTo(1, 1);
+      panicWindow.moveTo(-9999, -9999);
+      panicWindow.blur();
+      window.focus();
+      panicVisible = false;
+    } catch(e) {}
+  }
+
+  function togglePanic() {
+    const cfg = getPanicConfig();
+    if (!cfg.url) return;
+    if (!panicWindow || panicWindow.closed) {
+      // Window was closed externally — reopen and show immediately
+      const features = `width=${screen.availWidth},height=${screen.availHeight},left=0,top=0,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes`;
+      panicWindow = window.open(cfg.url, 'n3ptpanic', features);
+      panicVisible = true;
+    } else if (!panicVisible) {
+      showPanic();
+    } else {
+      hidePanic();
+    }
+  }
+
+  // Global keydown listener
+  document.addEventListener('keydown', function(e) {
+    if (captureActive) return;
+    const cfg = getPanicConfig();
+    if (cfg.combo && matchesCombo(e, cfg.combo)) {
+      e.preventDefault();
+      togglePanic();
+    }
+  });
+
+  // Key capture in settings
+  window.startPanicCapture = function(input) {
+    captureActive = true;
+    input.value = 'Press your key combo...';
+    input.style.color = 'var(--accent2)';
+    function onKey(e) {
+      e.preventDefault();
+      const combo = comboToString(e);
+      if (['control','alt','shift','meta'].includes(e.key.toLowerCase())) return;
+      capturedCombo = combo;
+      input.value = combo;
+      input.style.color = '';
+      document.removeEventListener('keydown', onKey);
+    }
+    document.addEventListener('keydown', onKey);
+  };
+
+  window.stopPanicCapture = function(input) {
+    captureActive = false;
+    if (capturedCombo) {
+      const cfg = getPanicConfig();
+      cfg.combo = capturedCombo;
+      setPanicConfig(cfg);
+      capturedCombo = null;
+    }
+  };
+
+  window.savePanic = function() {
+    const raw = document.getElementById('panicUrl').value.trim();
+    if (!raw) return;
+    const cfg = getPanicConfig();
+    cfg.url = raw.startsWith('http') ? raw : 'https://' + raw;
+    setPanicConfig(cfg);
+    // Preload immediately in background
+    preloadPanic(cfg.url);
+    const status = document.getElementById('panicStatus');
+    if (status) {
+      status.textContent = '✅ Saved! Loading in background...';
+      setTimeout(() => { status.textContent = ''; }, 3000);
+    }
+  };
+
+  window.clearPanic = function() {
+    localStorage.removeItem(PANIC_KEY);
+    document.getElementById('panicUrl').value = '';
+    document.getElementById('panicKey').value = '';
+    if (panicWindow && !panicWindow.closed) panicWindow.close();
+    panicWindow = null;
+    panicVisible = false;
+    const status = document.getElementById('panicStatus');
+    if (status) { status.textContent = 'Panic cleared.'; setTimeout(() => { status.textContent = ''; }, 2000); }
+  };
+
+  function loadPanicInputs() {
+    const cfg = getPanicConfig();
+    const urlInput = document.getElementById('panicUrl');
+    const keyInput = document.getElementById('panicKey');
+    if (urlInput && cfg.url) urlInput.value = cfg.url;
+    if (keyInput && cfg.combo) keyInput.value = cfg.combo;
+  }
+
+  const _origShowPage = window.showPage;
+  window.showPage = function(name) {
+    _origShowPage(name);
+    if (name === 'settings') loadPanicInputs();
+  };
+})();
+
+</script>
+
+<script>
+(function(){
+  if (!('ontouchstart' in window)) return;
+
+  const targets = [
+    '.home-page',
+    '.games-content',
+    '.settings-page',
+    '.home-card-row',
+    '.feat-row'
+  ];
+
+  function setupMomentumScroll(el, axis='y'){
+    if(!el) return;
+
+    let touching = false;
+    let startPos = 0;
+    let startScroll = 0;
+    let lastPos = 0;
+    let velocity = 0;
+    let raf = null;
+    let lastTime = 0;
+
+    function stopMomentum(){
+      if(raf){
+        cancelAnimationFrame(raf);
+        raf = null;
+      }
+    }
+
+    function momentum(){
+      if(Math.abs(velocity) < 0.08){
+        velocity = 0;
+        raf = null;
+        return;
+      }
+
+      if(axis === 'y'){
+        el.scrollTop -= velocity;
+      } else {
+        el.scrollLeft -= velocity;
+      }
+
+      velocity *= 0.95;
+      raf = requestAnimationFrame(momentum);
+    }
+
+    el.addEventListener('touchstart', e => {
+      touching = true;
+      stopMomentum();
+
+      const t = e.touches[0];
+      startPos = axis === 'y' ? t.clientY : t.clientX;
+      lastPos = startPos;
+      startScroll = axis === 'y' ? el.scrollTop : el.scrollLeft;
+      lastTime = performance.now();
+    }, { passive: true });
+
+    el.addEventListener('touchmove', e => {
+      if(!touching) return;
+
+      const t = e.touches[0];
+      const pos = axis === 'y' ? t.clientY : t.clientX;
+
+      const delta = pos - startPos;
+
+      if(axis === 'y'){
+        el.scrollTop = startScroll - delta;
+      } else {
+        el.scrollLeft = startScroll - delta;
+      }
+
+      const now = performance.now();
+      const dt = now - lastTime || 1;
+
+      velocity = (pos - lastPos) / dt * 16;
+
+      lastPos = pos;
+      lastTime = now;
+    }, { passive: true });
+
+    function endTouch(){
+      if(!touching) return;
+      touching = false;
+
+      stopMomentum();
+      raf = requestAnimationFrame(momentum);
+    }
+
+    el.addEventListener('touchend', endTouch, { passive: true });
+    el.addEventListener('touchcancel', endTouch, { passive: true });
+  }
+
+  function init(){
+    document.querySelectorAll('.home-page,.games-content,.settings-page').forEach(el=>{
+      setupMomentumScroll(el, 'y');
+    });
+
+    document.querySelectorAll('.home-card-row,.feat-row').forEach(el=>{
+      setupMomentumScroll(el, 'x');
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
