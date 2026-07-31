@@ -20,6 +20,7 @@
   --c-ugs: #f59e0b;
   --c-gn: #fc2651;
   --c-seraph: #a855f7;
+  --c-luminsdk: #3b82f6;
   --sidebar-w: 56px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -458,7 +459,7 @@ body{
 .gname{font-size:13.2px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 .gsub{font-size:10.9px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px}
 .gsrc-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.gsrc-dot.gn{background:var(--c-gn)}.gsrc-dot.ugs{background:var(--c-ugs)}.gsrc-dot.seraph{background:var(--c-seraph)}
+.gsrc-dot.gn{background:var(--c-gn)}.gsrc-dot.ugs{background:var(--c-ugs)}.gsrc-dot.seraph{background:var(--c-seraph)}.gsrc-dot.luminsdk{background:var(--c-luminsdk)}
 .play-btn{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(37,99,235,.88);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .13s;font-size:11.5px;color:#fff}
 
 /* ═══ PLAYER ═══ */
@@ -486,7 +487,67 @@ body{
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{font-size:13.8px;color:var(--muted2)}
 .lsrc{font-size:10.9px;margin-top:-4px;font-weight:700;letter-spacing:.08em}
-.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}
+.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}.lsrc.luminsdk{color:#93c5fd}
+
+/* ═══ TOUCH CONTROLS (mobile mode) ═══
+   The layer sits ABOVE the game iframe in the parent document; only the pads
+   themselves take pointer events so the rest of the game stays tappable. */
+/* Absolute, so in a game it covers the FRAME only: pad positions are then
+   relative to the game area and the gear sits inside it, clear of the player
+   header. Preview (outside a game) has no frame to sit in, so it goes fixed. */
+.tc-layer{position:absolute;inset:0;z-index:320;display:none;pointer-events:none;touch-action:none;-webkit-user-select:none;user-select:none}
+.tc-layer.on{display:block}
+.tc-layer.preview{position:fixed;z-index:380;background:rgba(3,8,18,.72);display:block}
+.tc-pad{position:absolute;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center;
+  font-family:'Fredoka',sans-serif;font-weight:700;color:#eaf3ff;text-shadow:0 1px 3px rgba(0,0,0,.6);
+  border:1px solid rgba(180,215,255,.32);border-radius:50%;backdrop-filter:blur(3px);transform:translate(-50%,-50%)}
+.tc-btn{width:62px;height:62px;font-size:16px;letter-spacing:.02em}
+.tc-btn.wide{width:auto;min-width:62px;padding:0 16px;border-radius:31px}
+.tc-pad:active,.tc-pad.held{border-color:rgba(96,165,250,.85);transform:translate(-50%,-50%) scale(.94)}
+.tc-stick{width:132px;height:132px}
+.tc-stick .tc-nub{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;
+  background:rgba(96,165,250,.5);border:1px solid rgba(180,215,255,.5);pointer-events:none}
+.tc-stick .tc-ring{position:absolute;inset:10px;border-radius:50%;border:1px dashed rgba(180,215,255,.22);pointer-events:none}
+/* Key-pad style: the inverted T every keyboard uses for arrows / WASD —
+   up on the top row, left-down-right beneath it. */
+.tc-cluster{position:absolute;transform:translate(-50%,-50%);display:grid;grid-template-columns:repeat(3,54px);
+  grid-template-rows:repeat(2,54px);gap:6px;background:none;border:0;pointer-events:none}
+.tc-cluster .tc-key{position:relative;left:auto;top:auto;transform:none;width:54px;height:54px;font-size:15px;
+  border-radius:13px;pointer-events:auto}
+.tc-cluster .tc-key:active,.tc-cluster .tc-key.held{transform:scale(.94)}
+.tc-cluster .tc-key.up{grid-area:1/2}.tc-cluster .tc-key.left{grid-area:2/1}
+.tc-cluster .tc-key.down{grid-area:2/2}.tc-cluster .tc-key.right{grid-area:2/3}
+.tc-layer.moving .tc-cluster{pointer-events:auto;border:1px dashed rgba(252,211,77,.9);border-radius:16px;padding:4px}
+.tc-layer.moving .tc-cluster .tc-key{pointer-events:none}
+.tc-gear{position:absolute;pointer-events:auto;top:10px;right:10px;width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:rgba(7,17,32,.82);border:1px solid rgba(96,165,250,.3);color:#9ec3ff;cursor:pointer}
+.tc-layer.moving .tc-pad{border-style:dashed;border-color:rgba(252,211,77,.9);cursor:move}
+.tc-movebar{position:absolute;left:50%;top:14px;transform:translateX(-50%);pointer-events:auto;display:flex;gap:8px;align-items:center;
+  background:rgba(7,17,32,.94);border:1px solid rgba(96,165,250,.32);border-radius:12px;padding:8px 12px;
+  font-family:'Fredoka',sans-serif;font-size:12.6px;font-weight:700;color:#cfe3ff}
+
+/* Touch-control settings sheet + the mobile prompt */
+.tc-overlay{position:fixed;inset:0;z-index:420;background:rgba(3,8,18,.78);backdrop-filter:blur(4px);display:none;
+  align-items:center;justify-content:center;padding:18px}
+.tc-overlay.open{display:flex}
+.tc-sheet{width:100%;max-width:460px;max-height:86vh;overflow:auto;background:var(--panel);border:1px solid var(--border);
+  border-radius:16px;padding:20px;font-family:'Fredoka',sans-serif}
+.tc-sheet h3{font-size:17px;font-weight:800;color:var(--text);margin-bottom:3px}
+.tc-sheet .tc-sub{font-size:12.6px;color:var(--muted);margin-bottom:14px}
+.tc-group{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;background:rgba(10,24,40,.45)}
+.tc-group-t{font-size:12.6px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:9px}
+.tc-map{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.tc-map span{font-size:13.2px;color:var(--muted2);width:58px;flex-shrink:0}
+.tc-map select,.tc-map input{flex:1;min-width:0}
+.tc-row{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.tc-row input.tc-name{width:82px;flex-shrink:0}
+.tc-x{cursor:pointer;color:#fca5a5;font-size:17px;padding:0 5px;flex-shrink:0}
+.tc-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.tc-note{font-size:11.8px;color:var(--muted);margin-top:7px;line-height:1.6}
+.tc-prompt{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;
+  text-align:center;font-family:'Fredoka',sans-serif}
+.tc-prompt p{font-size:14.4px;color:var(--text);line-height:1.65;margin:14px 0 20px}
+.tc-prompt .tc-acts{justify-content:center}
 
 /* ═══ LOADING / EMPTY ═══ */
 .loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;gap:14px}
@@ -615,9 +676,11 @@ body{
 .src-filter-btn.on.sf-gn{background:rgba(252,38,81,.18);border-color:rgba(252,38,81,.35);color:#fc8099}
 .src-filter-btn.on.sf-ugs{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3);color:#fcd34d}
 .src-filter-btn.on.sf-seraph{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.3);color:#d8b4fe}
+.src-filter-btn.on.sf-luminsdk{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.35);color:#93c5fd}
 .sf-dot.gn{background:var(--c-gn)}
 .sf-dot.ugs{background:var(--c-ugs)}
 .sf-dot.seraph{background:var(--c-seraph)}
+.sf-dot.luminsdk{background:var(--c-luminsdk)}
 
 /* ═══ v2 HOME REDESIGN ═══ */
 .home-page{
@@ -1139,6 +1202,9 @@ body{font-weight:600}
         <button class="src-filter-btn sf-seraph on" id="sfbtn-seraph" onclick="toggleSrc('seraph')">
           <span class="sf-dot seraph"></span>Seraph
         </button>
+        <button class="src-filter-btn sf-luminsdk on" id="sfbtn-luminsdk" onclick="toggleSrc('luminsdk')">
+          <span class="sf-dot luminsdk"></span>LuminSDK
+        </button>
       </div>
     </div>
     <div class="games-content" id="games-content">
@@ -1260,6 +1326,29 @@ body{font-weight:600}
         </div>
       </div>
 
+      <!-- TOUCH CONTROLS -->
+      <div class="s-section">
+        <div class="s-section-title"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H7V5h10v14zm-5-1.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>Touch controls</div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">On-screen controls</div>
+            <div class="s-desc">Show a joystick and buttons over games, so you can play with a touchscreen</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="s-btn" id="tcToggleBtn" onclick="setTouchMode(!touchOn())">Enable</button>
+          </div>
+        </div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Customize</div>
+            <div class="s-desc">Remap the joystick, add or move buttons, set their opacity</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="s-btn ghost" onclick="tcOpenSheet()">Open controls</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1277,15 +1366,11 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.0</span><span class="cl-date">Jul 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.1</span><span class="cl-date">Jul 2026</span></div>
       <ul>
-        <li>Rebuilt as <b>N3ptune v2</b> &#8212; one self-contained page, no downloads.</li>
-        <li><b>Brand-new home page</b> &#8212; cleaner layout, a smaller refined Neptune logo, and popular games you can jump straight into.</li>
-        <li>Game lists now load <b>live</b> (nothing hardcoded) and cache for a day, so new games appear automatically.</li>
-        <li>Added the <b>UGS</b> source over GitLab &#8212; hundreds more games.</li>
-        <li>Games whose files live on a blocked CDN (gn-math) now <b>gray out with an explanation</b> instead of showing a black screen.</li>
-        <li>The popular row only shows working games &#8212; never blocked ones.</li>
-        <li>Live CDN mirror picking for faster loads.</li>
+        <li>Added touchscreen controls for mobile devices (mobile mode) and mobile detection for mobile mode</li>
+        <li>Added LuminSDK, 1169 new games</li>
+        <li>Fixed some minor bugs and had minor log changes</li>
       </ul>
     </div>
   </div>
@@ -1317,6 +1402,26 @@ body{font-weight:600}
       <button id="showAnywayBtn" onclick="showGameAnyway()" style="display:none;margin-top:14px;padding:8px 18px;background:rgba(37,99,235,0.18);border:1px solid rgba(37,99,235,0.35);color:var(--accent2);border-radius:8px;font-family:'Fredoka',sans-serif;font-size:13.2px;font-weight:700;cursor:pointer;letter-spacing:.04em;">Show Game Anyway</button>
     </div>
     <iframe id="gframe" allow="fullscreen;autoplay;pointer-lock;clipboard-write" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- TOUCH CONTROLS: pads live in the PARENT document, above the game iframe -->
+<div class="tc-layer" id="tcLayer"></div>
+
+<!-- Touch-control settings -->
+<div class="tc-overlay" id="tcSheetOverlay" onclick="if(event.target===this)tcCloseSheet()">
+  <div class="tc-sheet" id="tcSheet"></div>
+</div>
+
+<!-- Mobile detection prompt -->
+<div class="tc-overlay" id="tcPromptOverlay">
+  <div class="tc-prompt">
+    <div style="font-size:30px">📱</div>
+    <p>N3ptune has detected you are on mobile. Do you want to enable touchscreen controls? You can control this in settings, or turn it on right now.</p>
+    <div class="tc-acts">
+      <button class="s-btn ghost" onclick="tcPromptAnswer(false)">No</button>
+      <button class="s-btn" onclick="tcPromptAnswer(true)">Yes</button>
+    </div>
   </div>
 </div>
 
@@ -1539,9 +1644,10 @@ const GL_TREE = p => GL_APIROOT + 'tree?ref=' + GL_REF + '&per_page=100&path=' +
 
 let GN_COVER = "https://cdn.jsdelivr.net/gh/freebuisness/covers@main";
 let GN_HTML  = "https://cdn.jsdelivr.net/gh/freebuisness/html@main";
-let gnZones = [], ugsGames = [], seraphGames = [];
+let gnZones = [], ugsGames = [], seraphGames = [], luminsdkGames = [];
 let gnPop = {};
-let activeSrcs = new Set(['gn','ugs','seraph']);
+const SRC_LABEL = { gn:'GN-Math', ugs:'UGS', seraph:'Seraph', luminsdk:'LuminSDK' };
+let activeSrcs = new Set(['gn','ugs','seraph','luminsdk']);
 let activeSrc  = 'all'; // kept for compat
 let activeView = 'all';
 let activeSearch = '';
@@ -1603,7 +1709,7 @@ async function loadAll() {
   await resolveCdn().catch(() => {});
   GN_COVER = `https://${_cdnHost}/gh/freebuisness/covers@main`;
   GN_HTML  = `https://${_cdnHost}/gh/freebuisness/html@main`;
-  await Promise.allSettled([ ugsP, loadSeraph().then(rerender), loadGN().then(rerender) ]);
+  await Promise.allSettled([ ugsP, loadSeraph().then(rerender), loadGN().then(rerender), loadLuminSdk().then(rerender).catch(()=>{}) ]);
   rerender();
 }
 
@@ -1687,6 +1793,88 @@ async function loadUGS() {
   ugsGames.sort((a,b)=>a.name.localeCompare(b.name));
 }
 
+// ═══════════════════════════════════════════════════════════
+//  LUMIN — fourth source, via the LuminSDK script (blue)
+//  Unlike the other three (static files on jsDelivr/GitLab), Lumin is a hosted
+//  service: the SDK is fetched from jsDelivr but the catalogue, the cover icons
+//  and the games themselves come from a.luminsdk.com behind short-lived signed
+//  tokens. That has two consequences we design around:
+//    • nothing is cached in localStorage — the tokens expire, so a stale cache
+//      would hand out dead URLs. 12 requests of 100 games is cheap enough.
+//    • a game is a whole hosted page on another origin, so it is loaded with
+//      frame.src (NOT srcdoc) and none of our in-frame shims can reach it.
+// ═══════════════════════════════════════════════════════════
+const LUMIN_ICON = 'https://a.luminsdk.com/api/v1/icon/';
+let _luminReady = null;
+
+// The SDK needs init() before its data API answers. It wants a container to draw
+// its own grid into; we render games in N3ptune's grid instead, so it gets a
+// detached node it can do what it likes with.
+function _luminInit(){
+  if (_luminReady) return _luminReady;
+  _luminReady = new Promise((resolve, reject) => {
+    let waited = 0;
+    (function wait(){
+      if (typeof Lumin === 'undefined' || !Lumin.init){
+        if ((waited += 100) > 10000) return reject(new Error('LuminSDK script never loaded'));
+        return setTimeout(wait, 100);
+      }
+      const host = document.createElement('div');
+      host.id = 'lumin-host';
+      host.style.display = 'none';
+      document.body.appendChild(host);
+      let settled = false;
+      try {
+        Lumin.init({ container:'#lumin-host', theme:'dark',
+          onReady: () => { if(!settled){ settled = true; resolve(); } },
+          onError: (e) => { if(!settled){ settled = true; reject(e instanceof Error ? e : new Error(String(e))); } } });
+      } catch(e){ return reject(e); }
+      setTimeout(() => { if(!settled){ settled = true; resolve(); } }, 12000); // no onReady? try anyway
+    })();
+  });
+  return _luminReady;
+}
+
+async function loadLuminSdk(){
+  await _luminInit();
+  // Every SDK call gets a deadline. On a file:// page Chrome blocks the SDK's
+  // requests and getGames() simply NEVER settles — which silently left the whole
+  // source empty with no clue why. A rejected promise we can explain.
+  const withTimeout = (p, ms, what) => Promise.race([
+    p, new Promise((_, rej) => setTimeout(() => rej(new Error(what + ' timed out after ' + ms + 'ms')), ms))
+  ]);
+  const out = [];
+  let page = 1, pages = 1;
+  try {
+    do {
+      const r = await withTimeout(Lumin.getGames({ limit:100, page }), 15000, 'getGames(page ' + page + ')');
+      const games = (r && r.games) || [];
+      pages = (r && r.pages) || 1;
+      games.forEach(g => {
+        if (!g || !g.id) return;
+        out.push({
+          _src:'luminsdk', _key:'luminsdk_'+g.id, _id:g.id,
+          name: g.name || titleize(String(g.id).split('/').pop()),
+          // image_token already carries the game path, so the icon URL is just a join
+          cover: g.image_token ? LUMIN_ICON + g.image_token : null,
+          url: null,                 // resolved at launch — the signed URL is short-lived
+          _luminsdk: true,
+          tags:[], featured:false,
+        });
+      });
+      page++;
+    } while (page <= pages && page <= 30);
+  } catch(e){
+    console.warn('[N3ptune] LuminSDK: ' + (e && e.message ? e.message : e));
+    if (location.protocol === 'file:')
+      console.warn('[N3ptune] LuminSDK needs the page served over http(s) — a file:// page cannot reach its API, so it shows 0 games. The other three sources are unaffected.');
+    if (!out.length) { luminsdkGames = []; return; }   // partial pages are still worth showing
+  }
+  luminsdkGames = out;
+  luminsdkGames.sort((a,b)=>a.name.localeCompare(b.name));
+  console.log('[N3ptune] LuminSDK loaded ('+luminsdkGames.length+' games)');
+}
+
 async function loadSeraph() {
   // Seraph's repo is metadata-blocked on jsDelivr's package API (403) and we
   // never touch github.com, so we enumerate a different compliant way: fetch the
@@ -1749,6 +1937,8 @@ function getUnified() {
     list.push(...ugsGames);
   if (activeSrcs.has('seraph'))
     list.push(...seraphGames);
+  if (activeSrcs.has('luminsdk'))
+    list.push(...luminsdkGames);
   return list;
 }
 
@@ -1829,7 +2019,7 @@ function _vsRenderBatch() {
   for(let i = _vsRendered; i < end; i++){
     const g = _vsItems[i];
     const plays=g._src==='gn'?gnPop.year?.[g._id]:null;
-    const sub=plays?fmtN(plays)+' plays':(g.tags[0]?cap(g.tags[0]):(g._src==='ugs'?'UGS':g._src==='seraph'?'Seraph':'GN-Math'));
+    const sub=plays?fmtN(plays)+' plays':(g.tags[0]?cap(g.tags[0]):(SRC_LABEL[g._src]||'GN-Math'));
     const card=document.createElement('div');
     card.className='gcard'+(blockedGames.has(g._key)?' blocked':'');
     card.setAttribute('onclick',`launch('${g._key}')`);
@@ -1862,6 +2052,7 @@ function getAllGames() {
   })));
   list.push(...ugsGames);
   list.push(...seraphGames);
+  list.push(...luminsdkGames);
   return list;
 }
 
@@ -1872,7 +2063,7 @@ function pickRandom(arr, n, filterFn) {
 }
 
 function hcardHTML(g) {
-  const srcLabel = g._src==='gn'?'GN-Math':g._src==='seraph'?'Seraph':'UGS';
+  const srcLabel = SRC_LABEL[g._src] || 'UGS';
   const dotClass = g._src;
   const plays = g._src==='gn' && gnPop.year?.[g._id] ? fmtN(gnPop.year[g._id])+' plays' : srcLabel;
   return `<div class="hcard" onclick="launch('${g._key}')">
@@ -2028,11 +2219,11 @@ function doHomeSearch() {
 
 function setSource(src) {
   // Legacy: set all or single
-  if(src==='all'){activeSrcs=new Set(['gn','ugs','seraph']);}
+  if(src==='all'){activeSrcs=new Set(['gn','ugs','seraph','luminsdk']);}
   else{activeSrcs=new Set([src]);}
   activeSrc=src;
   updateSrcFilterBtns();
-  ['all','gn','ugs','seraph'].forEach(s=>{
+  ['all','gn','ugs','seraph','luminsdk'].forEach(s=>{
     const p=document.getElementById('pill-'+s);
     if(p){p.classList.toggle('active',s===src);}
   });
@@ -2057,7 +2248,7 @@ function toggleSrc(src) {
 }
 
 function updateSrcFilterBtns(){
-  ['gn','ugs','seraph'].forEach(s=>{
+  ['gn','ugs','seraph','luminsdk'].forEach(s=>{
     const b=document.getElementById('sfbtn-'+s);
     if(b) b.classList.toggle('on', activeSrcs.has(s));
   });
@@ -2079,6 +2270,37 @@ function launchRandom(){
   if(!list.length)return;
   launch(list[Math.floor(Math.random()*list.length)]._key);
 }
+
+// A <button> keeps DOM focus after you click it. Launch a game from "Surprise me"
+// (or Reload / Fullscreen / any button) and the keyboard still belongs to that
+// button, so the first Space or Enter the game receives ALSO re-activates it —
+// pressing space in a random game threw you into another random game. Give the
+// keyboard to the game frame and take it off whatever was clicked.
+function _handOffKeyboard(frame){
+  try {
+    const a = document.activeElement;
+    if (a && a !== document.body && a.blur) a.blur();
+    if (frame && frame.focus) frame.focus({ preventScroll: true });
+  } catch(e){}
+}
+
+// Belt and braces: while a game is open, never let Space/Enter activate a control
+// in THIS document. Keys typed at the game itself go to the iframe and never reach
+// here; anything arriving here means focus escaped back to the page (e.g. you
+// tapped Reload), which must not fire that button again on the next keypress.
+document.addEventListener('keydown', e => {
+  if (e.key !== ' ' && e.key !== 'Enter' && e.key !== 'Spacebar') return;
+  const player = document.getElementById('player');
+  if (!player || !player.classList.contains('open')) return;
+  const a = document.activeElement;
+  if (!a || a === document.body) return;
+  const tag = a.tagName;
+  if (tag === 'IFRAME' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || a.isContentEditable) return;
+  e.preventDefault();
+  if (a.blur) a.blur();
+  const f = document.getElementById('gframe');
+  if (f && f.focus) f.focus({ preventScroll: true });
+}, true);
 
 function findByKey(key){return getUnified().find(g=>g._key===key);}
 
@@ -2176,6 +2398,134 @@ function __cdnfix() {
   if (window.Worker){ var OW = window.Worker; window.Worker = function(u, o){ try { var m = S(u); if (m) return new OW(m, o); } catch(e){} return new OW(u, o); }; window.Worker.prototype = OW.prototype; }
 }
 function _cdnfixShim(){ return '<script>(' + __cdnfix.toString() + ')()<\/script>'; }
+
+// __dataGuard runs inside each game iframe. Several GN Unity builds are too big
+// for one jsDelivr file, so the game's OWN html splits <build>.data.unityweb into
+// .part1/.part2 and merges them in JS:
+//     fetch(part).then(r => r.arrayBuffer()).then(b => buffers.push(b))
+// — no r.ok check, no length check. A filtered/proxied network, a poisoned cache
+// entry or a dropped connection therefore gets concatenated in as if it were game
+// data. Unity's processDataJob then reads a garbage header and throws
+// "RangeError: Offset is outside the bounds of the DataView" from inside preRun,
+// so removeRunDependency('processDataJob') never runs and the loader HANGS at
+// ~100% forever (and because UnityLoader.js is cross-origin the console only says
+// a bare "Script error."). Validate every .partN/.unityweb response and retry it
+// across the jsDelivr mirrors before the game ever sees it.
+// Self-contained so it survives .toString() injection (no closure references).
+function __dataGuard() {
+  var M = ['cdn.jsdelivr.net','fastly.jsdelivr.net','gcore.jsdelivr.net','quantil.jsdelivr.net','testingcf.jsdelivr.net','originfastly.jsdelivr.net'];
+  function watched(u){ return /\.part\d+(\?|$)|\.unityweb(\?|$)/i.test(String(u || '')); }
+  // Same file on every mirror — a bad cache entry or a mangled transfer is
+  // usually specific to the one edge that served it.
+  function urlsFor(u){
+    var out = [String(u)];
+    try { var h = String(u).match(/^https:\/\/([^\/]+)/);
+      if (h && /(^|\.)jsdelivr\.net$/i.test(h[1]))
+        for (var i = 0; i < M.length; i++) if (M[i] !== h[1]) out.push(String(u).replace(h[1], M[i]));
+    } catch(e){}
+    return out;
+  }
+  // NOTE: never compare byteLength against content-length. jsDelivr gzips the
+  // response, so content-length is the TRANSFER size while arrayBuffer() returns
+  // the DECODED bytes — on these already-compressed .unityweb files the encoded
+  // body is even a few bytes larger, so that check fails on healthy downloads.
+  // A transfer that really is cut short rejects the fetch itself, which the retry
+  // below already handles.
+  function verdict(res, buf, url){
+    if (!res.ok) return 'HTTP ' + res.status;
+    if (!buf.byteLength) return 'empty response';
+    if (/^text\/html/i.test(res.headers.get('content-type') || '')) return 'got an HTML page, not game data';
+    // NOTE: do NOT sniff for a "UnityWeb" container header here. A .partN chunk is
+    // just a slice of bytes — the mirrors split framework JS, wasm and data alike,
+    // so a framework part legitimately starts with "var unityFramework = …". An
+    // earlier version rejected those, burned every mirror retrying, and killed the
+    // merge: the game then died on "unityFramework is not defined".
+    return null;
+  }
+  var of = window.fetch && window.fetch.bind(window);
+  if (!of || !window.Response) return;
+  window.fetch = function(input, init){
+    var url = (input && input.url) ? input.url : input;
+    if (!watched(url)) return of(input, init);
+    var urls = urlsFor(url), i = 0, name = String(url).split('/').pop();
+    function attempt(){
+      return of(urls[i], init).then(function(res){
+        return res.arrayBuffer().then(function(buf){
+          var why = verdict(res, buf, urls[i]);
+          if (why) throw new Error(why);
+          // Hand back a real Response so .arrayBuffer()/.blob()/.ok all behave.
+          return new Response(buf, { status: 200, headers: { 'content-type': res.headers.get('content-type') || 'application/octet-stream' } });
+        });
+      }).catch(function(e){
+        if (++i < urls.length){
+          console.warn('[N3ptune] ' + name + ' from ' + String(urls[i-1]).split('/')[2] + ' — ' + e.message + '; retrying on ' + String(urls[i]).split('/')[2]);
+          return attempt();
+        }
+        console.error('[N3ptune] ' + name + ' failed on all ' + urls.length + ' mirrors — ' + e.message + '. The game data is unusable, so the loader would hang.');
+        throw e;
+      });
+    }
+    return attempt();
+  };
+}
+function _dataGuardShim(){ return '<script>(' + __dataGuard.toString() + ')()<\/script>'; }
+
+// __touchKeys runs inside each game iframe and turns the parent's on-screen pads
+// into real keyboard events. The pads live in the PARENT document (they have to —
+// they must survive the game repainting), so a tap there cannot reach the game's
+// listeners on its own. The parent posts {__n3key:1,key,down} and this shim
+// synthesizes the KeyboardEvent locally, inside the game's own document.
+// It dispatches on the <canvas> when there is one (Unity/Godot/emulators bind
+// there) and lets it bubble to document/window, so a game listening on any of the
+// three sees exactly one event. keyCode/which are patched on because the
+// KeyboardEvent constructor ignores them and older game engines still read them.
+// Self-contained so it survives .toString() injection (no closure references).
+function __touchKeys() {
+  function shim(){
+    if (window.__n3keys) return; window.__n3keys = true;
+    var NAMED = { ArrowUp:38, ArrowDown:40, ArrowLeft:37, ArrowRight:39, Escape:27, Enter:13,
+      ' ':32, Shift:16, Control:17, Alt:18, Tab:9, Backspace:8, Delete:46 };
+    function codeFor(k){
+      if (k === ' ') return 'Space';
+      if (k.length === 1){
+        var c = k.toUpperCase();
+        if (c >= 'A' && c <= 'Z') return 'Key' + c;
+        if (c >= '0' && c <= '9') return 'Digit' + c;
+        return '';
+      }
+      if (k === 'Shift' || k === 'Control' || k === 'Alt') return k + 'Left';
+      return k;
+    }
+    function codeNum(k){ return NAMED[k] != null ? NAMED[k] : (k.length === 1 ? k.toUpperCase().charCodeAt(0) : 0); }
+    window.addEventListener('message', function(e){
+      var d = e.data;
+      if (!d || !d.__n3key || typeof d.key !== 'string') return;
+      var k = d.key, kc = codeNum(k);
+      var ev = new KeyboardEvent(d.down ? 'keydown' : 'keyup', {
+        key: k, code: codeFor(k), bubbles: true, cancelable: true, composed: true, view: window,
+        repeat: false, ctrlKey: false, shiftKey: false, altKey: false, metaKey: false });
+      try {
+        Object.defineProperty(ev, 'keyCode', { get: function(){ return kc; } });
+        Object.defineProperty(ev, 'which',   { get: function(){ return kc; } });
+      } catch(_){}
+      var target = document.querySelector('canvas') || document.activeElement || document.body || document;
+      try { target.dispatchEvent(ev); } catch(_){ try { document.dispatchEvent(ev); } catch(__){} }
+    }, false);
+  }
+  return '<script>(' + shim.toString() + ')()<\/script>';
+}
+
+// jsDelivr sends `access-control-allow-origin: *`, but a <script src> without a
+// crossorigin attribute is still opaque to window.onerror — every uncaught error
+// inside it arrives as a bare "Script error." with no message, file or line, which
+// makes a failing game impossible to diagnose from the log relay. Marking only the
+// jsDelivr-hosted scripts crossorigin=anonymous surfaces the real error. Limited to
+// jsdelivr hosts on purpose: adding it to a host that does NOT send CORS headers
+// would block the script outright.
+function _crossOriginScripts(html){
+  return String(html).replace(/<script\b([^>]*\bsrc\s*=\s*["']https:\/\/[^"']*jsdelivr\.net\/[^"']*["'][^>]*)>/gi,
+    function(m, attrs){ return /\bcrossorigin\b/i.test(attrs) ? m : '<script' + attrs + ' crossorigin="anonymous">'; });
+}
 
 // Rewrite jsdelivr.net /gh/USER/REPO@REF → staticdelivr /gh/USER/REPO/REF in a
 // blob of HTML/text (for static <script>/<link>/<img> tags the parser handles).
@@ -2452,7 +2802,7 @@ async function loadGitlabGame(g, frame) {
     // GitLab hooks wrap it: a runtime asset resolves GitLab first, else falls
     // through to the jsDelivr reroute.
     const shim = _cdnfixShim() + _glIframeShim(extBase, dir);
-    const headInject = _gameLogShim(g.name) + '<base href="' + rawBase + '">' + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() +
+    const headInject = _gameLogShim(g.name) + '<base href="' + rawBase + '">' + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() + __touchKeys() +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}' +
       'ruffle-player,ruffle-embed,ruffle-object{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important}</style>' +
@@ -2460,7 +2810,7 @@ async function loadGitlabGame(g, frame) {
     html = html.replace(/(<head[^>]*>)/i, (m) => m + headInject);
 
     glog('info', 'writing GitLab game into iframe (srcdoc, '+html.length+' bytes)…');
-    frame.onload = () => { frame.onload = null; glog('ok', 'iframe onload — game frame ready'); setTimeout(dismiss, 300); };
+    frame.onload = () => { frame.onload = null; glog('ok', 'iframe onload — game frame ready'); _handOffKeyboard(frame); setTimeout(dismiss, 300); };
     frame.removeAttribute('src');
     frame.srcdoc = html;
     setTimeout(dismiss, 6000);
@@ -2852,7 +3202,8 @@ async function launch(key) {
   playedGames.add(key);
   persistPlayed();
   const g = findByKey(key);
-  if (!g||!g.url) return;
+  if (!g) return;
+  if (!g.url && g._src !== 'luminsdk') return;   // Lumin resolves its URL at launch
   activeGame={key, src:g._src, name:g.name, url:g.url, gnHtml:null};
   _glogTag = g.name; _glogT0 = performance.now(); _installGameLogRelay();
   _glogBuf = [
@@ -2864,9 +3215,9 @@ async function launch(key) {
   ];
   console.log('%c─────────────────────────────────────────', 'color:#2563eb');
   glog('info', '▶ launching   src='+g._src+'   key='+key);
-  glog('info', 'url:', g.url);
+  glog('info', 'url:', g.url || '(LuminSDK resolves it at launch)');
   document.getElementById('ptitle').textContent=g.name;
-  document.getElementById('lsrc').textContent=g._src==='gn'?'GN-Math':g._src==='seraph'?'Seraph':'UGS';
+  document.getElementById('lsrc').textContent=SRC_LABEL[g._src]||'UGS';
   document.getElementById('lsrc').className='lsrc '+g._src;
   document.getElementById('ltxt').textContent='Loading '+g.name+'...';
   document.getElementById('showAnywayBtn').style.display='none';
@@ -2877,6 +3228,7 @@ async function launch(key) {
     if (btn && pload && !pload.classList.contains('gone')) btn.style.display='';
   }, 5000);
   document.getElementById('player').classList.add('open');
+  tcRender();                 // pads follow the game into view
   const tip = document.getElementById('ptip');
   if (tip) tip.style.display = '';
   document.getElementById('pload').classList.remove('gone');
@@ -2884,6 +3236,32 @@ async function launch(key) {
   // Already known to live on a jsDelivr-blocked account — explain, don't re-fetch.
   if (blockedGames.has(key)) { _showBlockedNotice(key, blockedGames.get(key)); return; }
   const frame=document.getElementById('gframe');
+
+  // ── Lumin: a hosted page on a.luminsdk.com behind a signed, short-lived URL.
+  // We can't fetch-and-patch it (cross-origin), so point the frame straight at it.
+  // None of our in-frame shims apply, which also means the on-screen touch pads
+  // can't deliver keys into it — logged so a failure isn't a mystery.
+  if (g._src === 'luminsdk') {
+    document.getElementById('newTabBtn').style.display='none';
+    try {
+      const r = await Lumin.getGameUrl(g._id);
+      const url = (r && r.url) || r;
+      if (!url) throw new Error('LuminSDK returned no URL');
+      glog('info', 'loader: LuminSDK (hosted, signed URL)');
+      glog('info', 'resolved: ' + String(url).slice(0, 90) + '…');
+      activeGame.url = url;
+      frame.onload = () => { frame.onload = null; glog('ok','iframe onload — game frame ready');
+                             _handOffKeyboard(frame);
+                             setTimeout(()=>document.getElementById('pload').classList.add('gone'), 300); };
+      frame.removeAttribute('srcdoc');
+      frame.src = url;
+      setTimeout(()=>document.getElementById('pload').classList.add('gone'), 8000);
+    } catch(e){
+      glog('error', 'LuminSDK could not resolve this game: ' + (e && e.message ? e.message : e));
+      document.getElementById('ltxt').textContent = 'Lumin could not load this game.';
+    }
+    return;
+  }
   const ntb=document.getElementById('newTabBtn');
   // New tab button: fetch HTML and write into new window with base tag
   ntb.style.display = '';
@@ -2987,13 +3365,14 @@ async function launch(key) {
     // black screen. So only add our base when the game declares none.
     injected = _repairGhostRefs(injected, glog);
     injected = _repairLibRefs(injected, glog);
+    injected = _crossOriginScripts(injected);   // real error messages, not "Script error."
     // Whatever blocked-account refs survive the repairs are the game's own
     // engine/data — unrecoverable. Stop here rather than write a black frame.
     const _blkAcct = _blockedAccountIn(injected);
     if (_blkAcct) { _showBlockedNotice(key, _blkAcct); return; }
     const hasOwnBase = /<base\b[^>]*\bhref\s*=/i.test(injected);
     glog('info', hasOwnBase ? 'using the game\'s OWN <base> (not injecting ours)' : ('injected <base> '+baseUrl));
-    const headInject = _gameLogShim(g.name) + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() +
+    const headInject = _gameLogShim(g.name) + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() + _dataGuardShim() + __touchKeys() +
       (hasOwnBase ? '' : `<base href="${baseUrl}">`) +
       `<meta name="viewport" content="width=device-width,initial-scale=1">` +
       `<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}` +
@@ -3014,7 +3393,7 @@ async function launch(key) {
       document.getElementById('showAnywayBtn').style.display='none';
       clearTimeout(window._showAnywayTimer);
     };
-    frame.onload = () => { frame.onload = null; glog('ok', 'iframe onload — game frame ready'); setTimeout(dismissLoader, 300); };
+    frame.onload = () => { frame.onload = null; glog('ok', 'iframe onload — game frame ready'); _handOffKeyboard(frame); setTimeout(dismissLoader, 300); };
     frame.removeAttribute('src');
     frame.srcdoc = injected;
     // Safety net: dismiss the loader even if onload never fires
@@ -3049,13 +3428,444 @@ function closeGame(){
   f.src='about:blank';
   document.getElementById('newTabBtn').style.display='';
   activeGame=null;
+  tcReleaseAll();
+  tcRender();
 }
 
 function reloadGame(){if(!activeGame)return;document.getElementById('pload').classList.remove('gone');launch(activeGame.key);}
 
+
+// ═══════════════════════════════════════════════════════════
+//  TOUCH CONTROLS (mobile mode)
+//  On-screen joystick + buttons drawn in THIS document, above the game iframe.
+//  Each pad posts {__n3key} into the frame, where __touchKeys() turns it into a
+//  real KeyboardEvent (see that shim for why the pads can't live in the game).
+//  Config lives in localStorage so it survives reloads:
+//    n3_touch       '1' | '0'  — mode on/off
+//    n3_touch_asked '1'        — the detection prompt has been answered
+//    n3_touch_cfg   JSON       — joystick map, buttons, positions, opacity
+// ═══════════════════════════════════════════════════════════
+const TC_ON='n3_touch', TC_ASKED='n3_touch_asked', TC_CFG='n3_touch_cfg';
+// A pad is pinned to a CORNER of the game frame, at a distance in PIXELS from
+// each of its two edges (ax/ay pick the corner, dx/dy are the offsets to the pad's
+// centre). Percentages were wrong for this: "13% from the left" is 12px on a phone
+// but 135px on a 1258px-wide frame, so pads drifted toward the middle of the
+// screen as the frame grew. Pixels from an edge hug that edge at any size.
+// Defaults: joystick bottom-left, Z and X side by side bottom-right, ESC top-left
+// (opposite the gear).
+const TC_VER = 3;                 // bump when the default LAYOUT changes
+const TC_DEFAULTS = {
+  v: TC_VER,
+  stick:{ mode:'stick', ax:'left', ay:'bottom', dx:78, dy:96, up:'w', down:'s', left:'a', right:'d' },
+  buttons:[ {id:'z', label:'Z',   key:'z',      ax:'right', ay:'bottom', dx:130, dy:72},
+            {id:'x', label:'X',   key:'x',      ax:'right', ay:'bottom', dx:50,  dy:72},
+            {id:'e', label:'ESC', key:'Escape', ax:'left',  ay:'top',    dx:46,  dy:40} ],
+  opacity:35
+};
+// Anything a game is likely to want, so a phone with no keyboard can still remap.
+const TC_KEYS = [['w','W'],['a','A'],['s','S'],['d','D'],['ArrowUp','↑ Up arrow'],['ArrowDown','↓ Down arrow'],
+  ['ArrowLeft','← Left arrow'],['ArrowRight','→ Right arrow'],[' ','Space'],['Enter','Enter'],['Escape','Escape'],
+  ['Shift','Shift'],['Control','Ctrl'],['Tab','Tab'],['z','Z'],['x','X'],['c','C'],['e','E'],['q','Q'],['r','R'],
+  ['f','F'],['g','G'],['p','P'],['1','1'],['2','2'],['3','3'],['4','4']];
+
+let tcHeld = new Set();          // keys currently pressed by a pad
+let tcMoveMode = false;
+let tcDragging = null;
+
+function touchOn(){ try { return localStorage.getItem(TC_ON) === '1'; } catch(e){ return false; } }
+function tcCfg(){
+  try { const o = JSON.parse(localStorage.getItem(TC_CFG) || 'null');
+    if (o && o.stick && Array.isArray(o.buttons)) return (o.v === TC_VER) ? o : tcMigrate(o); } catch(e){}
+  return JSON.parse(JSON.stringify(TC_DEFAULTS));
+}
+// A saved config is returned verbatim, so changing TC_DEFAULTS alone would never
+// reach anyone who already has one — their pads would sit at the old coordinates
+// forever. On a layout bump the BUILT-IN pads (stick, Z, X, ESC) go to the new
+// default spots once; pads the user added keep where they were, converted from the
+// old percentages against the current frame. Keys, opacity and joystick style are
+// untouched, and it happens once per bump.
+function tcMigrate(o){
+  const d = TC_DEFAULTS;
+  const l = document.getElementById('tcLayer');
+  const r = l && l.getBoundingClientRect();
+  const box = (r && r.width) ? r : { width: innerWidth, height: innerHeight };
+  const anchor = t => {                       // old {x,y} percent → corner + pixels
+    if (t.ax) return;
+    const cx = (t.x == null ? 50 : t.x) / 100 * box.width;
+    const cy = (t.y == null ? 50 : t.y) / 100 * box.height;
+    t.ax = cx <= box.width / 2 ? 'left' : 'right';
+    t.dx = Math.round(t.ax === 'left' ? cx : box.width - cx);
+    t.ay = cy <= box.height / 2 ? 'top' : 'bottom';
+    t.dy = Math.round(t.ay === 'top' ? cy : box.height - cy);
+    delete t.x; delete t.y;
+  };
+  const useDefault = (t, def) => {
+    t.ax = def.ax; t.ay = def.ay; t.dx = def.dx; t.dy = def.dy;
+    delete t.x; delete t.y;
+  };
+  useDefault(o.stick, d.stick);
+  if (!o.stick.mode) o.stick.mode = d.stick.mode;
+  o.buttons.forEach(b => {
+    const def = d.buttons.find(x => x.id === b.id);
+    if (def) useDefault(b, def); else anchor(b);
+  });
+  o.v = TC_VER;
+  tcSave(o);
+  return o;
+}
+function tcSave(cfg){ try { localStorage.setItem(TC_CFG, JSON.stringify(cfg)); } catch(e){} }
+
+// Coarse pointer + a real touch digitizer. Deliberately not UA sniffing: a
+// touchscreen laptop reports fine pointers, a phone reports coarse.
+function tcIsMobile(){
+  try { return (matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0)
+            || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); } catch(e){ return false; }
+}
+
+// ── the detection prompt ──
+function tcMaybePrompt(){
+  let asked = false;
+  try { asked = localStorage.getItem(TC_ASKED) === '1'; } catch(e){}
+  if (asked || touchOn() || !tcIsMobile()) return;
+  // Don't talk over the passcode gate — wait until it's gone.
+  const gate = document.getElementById('keyGate');
+  if (gate && gate.style.display !== 'none') return setTimeout(tcMaybePrompt, 600);
+  document.getElementById('tcPromptOverlay').classList.add('open');
+}
+function tcPromptAnswer(yes){
+  document.getElementById('tcPromptOverlay').classList.remove('open');
+  // Recorded either way: answering "no" shouldn't re-ask on every visit.
+  try { localStorage.setItem(TC_ASKED, '1'); } catch(e){}
+  setTouchMode(!!yes);
+}
+
+function setTouchMode(on){
+  try { localStorage.setItem(TC_ON, on ? '1' : '0'); } catch(e){}
+  const b = document.getElementById('tcToggleBtn');
+  if (b){ b.textContent = on ? 'Disable' : 'Enable'; b.className = on ? 's-btn danger' : 's-btn'; }
+  tcReleaseAll();
+  tcRender();
+}
+
+// ── key delivery ──
+function tcSend(key, down){
+  const f = document.getElementById('gframe');
+  if (!f || !f.contentWindow) return;
+  try { f.contentWindow.postMessage({ __n3key:1, key:key, down:!!down }, '*'); } catch(e){}
+}
+function tcPress(key){ if (!key || tcHeld.has(key)) return; tcHeld.add(key); tcSend(key, true); }
+function tcRelease(key){ if (!key || !tcHeld.has(key)) return; tcHeld.delete(key); tcSend(key, false); }
+function tcReleaseAll(){ [...tcHeld].forEach(tcRelease); }
+
+// ── rendering ──
+function tcVisible(){ return touchOn() && document.getElementById('player').classList.contains('open'); }
+function tcRender(){
+  const layer = document.getElementById('tcLayer');
+  if (!layer) return;
+  const preview = layer.classList.contains('preview');
+  if (!tcVisible() && !preview){ layer.classList.remove('on'); layer.innerHTML = ''; return; }
+  // Fullscreen renders ONLY the fullscreen element's subtree, so during a game the
+  // layer has to be a child of .pframe (what fsGame() fullscreens) to survive it.
+  // Outside a game it goes back on <body> so move-mode preview can cover the page.
+  const host = tcVisible() ? (document.querySelector('.pframe') || document.body) : document.body;
+  if (layer.parentNode !== host) host.appendChild(layer);
+  const cfg = tcCfg(), op = Math.max(0, Math.min(100, cfg.opacity)) / 100;
+  const bg = 'background:rgba(7,17,32,' + op.toFixed(2) + ')';
+  let html;
+  // Positions are applied after insertion by tcPlace(), which needs the pads'
+  // real sizes to resolve their corner anchors.
+  if (cfg.stick.mode === 'keys'){
+    // Four pads in the joystick's spot, laid out like the keys really are.
+    html = '<div class="tc-cluster" id="tcStick">';
+    [['up','▲'],['left','◀'],['down','▼'],['right','▶']].forEach(d => {
+      html += '<div class="tc-pad tc-key ' + d[0] + '" data-dir="' + d[0] + '" style="' + bg + '">' + d[1] + '</div>';
+    });
+    html += '</div>';
+  } else {
+    html = '<div class="tc-pad tc-stick" id="tcStick" style="' + bg + '">'
+         + '<div class="tc-ring"></div><div class="tc-nub" id="tcNub"></div></div>';
+  }
+  cfg.buttons.forEach(b => {
+    html += '<div class="tc-pad tc-btn' + (b.label.length > 2 ? ' wide' : '') + '" data-btn="' + b.id + '"'
+          + ' style="' + bg + '">' + esc(b.label) + '</div>';
+  });
+  html += '<div class="tc-gear" onclick="tcOpenSheet()" title="Control settings">'
+        + '<svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div>';
+  if (tcMoveMode) html += '<div class="tc-movebar">Drag a control to move it'
+        + '<button class="s-btn" style="padding:5px 12px" onclick="tcSetMove(false)">Done</button></div>';
+  layer.innerHTML = html;
+  layer.classList.add('on');
+  layer.classList.toggle('moving', tcMoveMode);
+  tcBind(layer, cfg);
+  tcPlace(layer, cfg);
+}
+
+// Resolve every pad's corner anchor into a concrete centre position, then keep it
+// inside the frame. Runs after insertion because it needs each pad's real size.
+function tcPlace(layer, cfg){
+  const box = layer.getBoundingClientRect();
+  if (!box.width || !box.height) return;
+  const put = (el, t) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect(), m = 6;
+    let cx = (t.ax === 'right')  ? box.width  - t.dx : t.dx;
+    let cy = (t.ay === 'bottom') ? box.height - t.dy : t.dy;
+    // A pad can't hang off the frame, however small the screen gets.
+    cx = Math.max(r.width/2  + m, Math.min(box.width  - r.width/2  - m, cx));
+    cy = Math.max(r.height/2 + m, Math.min(box.height - r.height/2 - m, cy));
+    el.style.left = cx + 'px';
+    el.style.top  = cy + 'px';
+  };
+  put(layer.querySelector('#tcStick'), cfg.stick);
+  cfg.buttons.forEach(b => put(layer.querySelector('[data-btn="' + b.id + '"]'), b));
+}
+
+function tcBind(layer, cfg){
+  layer.querySelectorAll('.tc-pad').forEach(el => {
+    el.addEventListener('pointerdown', ev => tcPadDown(ev, el, cfg), { passive:false });
+  });
+  // In move mode the whole key cluster drags as one piece, not key by key.
+  const cl = layer.querySelector('.tc-cluster');
+  if (cl) cl.addEventListener('pointerdown', ev => { if (tcMoveMode){ ev.preventDefault(); tcDragStart(ev, cl, cfg); } }, { passive:false });
+}
+
+function tcPadDown(ev, el, cfg){
+  ev.preventDefault();
+  if (tcMoveMode) return tcDragStart(ev, el.closest('.tc-cluster') || el, cfg);
+  try { el.setPointerCapture(ev.pointerId); } catch(e){}
+  const dir = el.getAttribute('data-dir');
+  if (dir){                                  // one key of the cluster
+    const k = cfg.stick[dir];
+    el.classList.add('held');
+    tcPress(k);
+    const up = () => { el.classList.remove('held'); tcRelease(k);
+      el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    return;
+  }
+  const id = el.getAttribute('data-btn');
+  if (id){
+    const b = cfg.buttons.find(x => x.id === id);
+    if (!b) return;
+    el.classList.add('held');
+    tcPress(b.key);
+    const up = () => { el.classList.remove('held'); tcRelease(b.key);
+      el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    return;
+  }
+  // joystick: track the pointer and translate the vector into 4/8-way keys
+  const nub = document.getElementById('tcNub');
+  const r = el.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+  const max = r.width * 0.34, dead = r.width * 0.16;
+  const move = e => {
+    e.preventDefault();
+    let dx = e.clientX - cx, dy = e.clientY - cy;
+    const d = Math.hypot(dx, dy) || 1, k = Math.min(1, max / d);
+    if (nub) nub.style.transform = 'translate(' + (dx*k) + 'px,' + (dy*k) + 'px)';
+    const want = new Set();
+    if (d > dead){
+      // 22.5° bands give clean diagonals instead of a flickering single axis.
+      const a = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (a > -157.5 && a < -22.5) want.add(cfg.stick.up);
+      if (a > 22.5 && a < 157.5)   want.add(cfg.stick.down);
+      if (a > 112.5 || a < -112.5) want.add(cfg.stick.left);
+      if (a > -67.5 && a < 67.5)   want.add(cfg.stick.right);
+    }
+    [cfg.stick.up, cfg.stick.down, cfg.stick.left, cfg.stick.right]
+      .forEach(k2 => { if (!want.has(k2)) tcRelease(k2); });
+    want.forEach(tcPress);
+  };
+  const end = e => {
+    if (nub) nub.style.transform = '';
+    [cfg.stick.up, cfg.stick.down, cfg.stick.left, cfg.stick.right].forEach(tcRelease);
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', end);
+    el.removeEventListener('pointercancel', end);
+  };
+  el.addEventListener('pointermove', move, { passive:false });
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  move(ev);
+}
+
+// ── move mode ──
+function tcSetMove(on){ tcMoveMode = !!on; tcRender(); }
+function tcDragStart(ev, el, cfg){
+  try { el.setPointerCapture(ev.pointerId); } catch(e){}
+  const id = el.getAttribute('data-btn');
+  // Measure against the layer (the game frame): it sits below the player header,
+  // not at the top of the window.
+  const box = document.getElementById('tcLayer').getBoundingClientRect();
+  const move = e => {
+    e.preventDefault();
+    const x = Math.max(0, Math.min(box.width,  e.clientX - box.left));
+    const y = Math.max(0, Math.min(box.height, e.clientY - box.top));
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    // Pin to whichever corner it was dropped nearest, in pixels from those edges,
+    // so it keeps hugging that corner on any other screen size.
+    const t = id ? cfg.buttons.find(b => b.id === id) : cfg.stick;
+    if (t){
+      t.ax = x <= box.width / 2  ? 'left' : 'right';
+      t.dx = Math.round(t.ax === 'left' ? x : box.width - x);
+      t.ay = y <= box.height / 2 ? 'top'  : 'bottom';
+      t.dy = Math.round(t.ay === 'top'  ? y : box.height - y);
+      delete t.x; delete t.y;
+    }
+  };
+  const end = () => { tcSave(cfg);
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', end);
+    el.removeEventListener('pointercancel', end); };
+  el.addEventListener('pointermove', move, { passive:false });
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+
+// ── settings sheet ──
+function tcKeySelect(val, onchange){
+  const known = TC_KEYS.some(k => k[0] === val);
+  let h = '<select class="s-input" onchange="' + onchange + '">';
+  TC_KEYS.forEach(k => { h += '<option value="' + esc(k[0]) + '"' + (k[0] === val ? ' selected' : '') + '>' + esc(k[1]) + '</option>'; });
+  h += '<option value="__custom"' + (known ? '' : ' selected') + '>Custom: ' + (known ? '…' : esc(val)) + '</option></select>';
+  return h;
+}
+function tcOpenSheet(){
+  tcRenderSheet();
+  document.getElementById('tcSheetOverlay').classList.add('open');
+}
+function tcCloseSheet(){
+  document.getElementById('tcSheetOverlay').classList.remove('open');
+  const layer = document.getElementById('tcLayer');
+  layer.classList.remove('preview');
+  tcMoveMode = false;
+  tcRender();
+}
+function tcRenderSheet(){
+  const cfg = tcCfg();
+  const dirs = [['up','Up'],['down','Down'],['left','Left'],['right','Right']];
+  let h = '<h3>Touch controls</h3><div class="tc-sub">' + (touchOn() ? 'On' : 'Off')
+        + ' &#183; changes save as you make them</div>';
+
+  const keys = cfg.stick.mode === 'keys';
+  h += '<div class="tc-group"><div class="tc-group-t">Movement</div>'
+     + '<div class="tc-acts" style="margin:0 0 10px">'
+     + '<button class="s-btn' + (keys ? ' ghost' : '') + '" onclick="tcSetStickMode(\'stick\')">Joystick</button>'
+     + '<button class="s-btn' + (keys ? '' : ' ghost') + '" onclick="tcSetStickMode(\'keys\')">Key pad</button></div>';
+  dirs.forEach(d => {
+    h += '<div class="tc-map"><span>' + d[1] + '</span>'
+       + tcKeySelect(cfg.stick[d[0]], "tcSetStick('" + d[0] + "',this)") + '</div>';
+  });
+  h += '<div class="tc-acts"><button class="s-btn ghost" onclick="tcPreset(\'wasd\')">WASD</button>'
+     + '<button class="s-btn ghost" onclick="tcPreset(\'arrows\')">Arrow keys</button></div>'
+     + '<div class="tc-note">' + (keys
+        ? 'Four separate keys in the joystick&#39;s spot, laid out like a keyboard: up on top, left/down/right below.'
+        : 'Each direction sends that key for as long as you hold the stick that way — diagonals send two.')
+     + '</div></div>';
+
+  h += '<div class="tc-group"><div class="tc-group-t">Buttons</div>';
+  cfg.buttons.forEach(b => {
+    h += '<div class="tc-row"><input class="s-input tc-name" value="' + esc(b.label) + '" maxlength="6"'
+       + ' oninput="tcSetBtn(\'' + b.id + '\',\'label\',this.value)">'
+       + tcKeySelect(b.key, "tcSetBtn('" + b.id + "','key',this)")
+       + '<span class="tc-x" onclick="tcDelBtn(\'' + b.id + '\')" title="Remove">&#215;</span></div>';
+  });
+  h += '<div class="tc-acts"><button class="s-btn" onclick="tcAddBtn()">Add button</button>'
+     + '<button class="s-btn ghost" onclick="tcStartMove()">Move buttons</button></div>'
+     + '<div class="tc-note">The name is what you see on the pad; the key is what the game receives.</div></div>';
+
+  h += '<div class="tc-group"><div class="tc-group-t">Appearance</div>'
+     + '<div class="tc-map"><span>Opacity</span>'
+     + '<input type="range" min="5" max="100" value="' + cfg.opacity + '" style="flex:1"'
+     + ' oninput="tcSetOpacity(this.value)"><span style="width:38px;text-align:right" id="tcOpVal">' + cfg.opacity + '%</span></div></div>';
+
+  h += '<div class="tc-acts">'
+     + '<button class="s-btn ghost" onclick="setTouchMode(' + (touchOn() ? 'false' : 'true') + ');tcRenderSheet()">'
+     + (touchOn() ? 'Turn off' : 'Turn on') + '</button>'
+     + '<button class="s-btn danger" onclick="tcReset()">Reset to defaults</button>'
+     + '<button class="s-btn" onclick="tcCloseSheet()" style="margin-left:auto">Done</button></div>';
+  document.getElementById('tcSheet').innerHTML = h;
+}
+
+// A <select> can't capture a keystroke on a phone, so "Custom" asks for the key
+// by name — one character, or a name like ArrowUp / Escape / Space.
+function tcPickKey(sel, current){
+  if (sel.value !== '__custom') return sel.value;
+  const v = prompt('Key to send?\n\nOne character (a, 5, /) or a name like ArrowUp, Escape, Enter, Shift, Space.', current || '');
+  if (v === null || !v.trim()) return current;
+  return v.trim() === 'Space' ? ' ' : v.trim();
+}
+function tcSetStickMode(mode){
+  const cfg = tcCfg();
+  cfg.stick.mode = (mode === 'keys') ? 'keys' : 'stick';
+  tcReleaseAll();                 // don't leave a direction stuck from the old style
+  tcSave(cfg); tcRenderSheet(); tcRender();
+}
+function tcSetStick(dir, sel){
+  const cfg = tcCfg();
+  cfg.stick[dir] = tcPickKey(sel, cfg.stick[dir]);
+  tcSave(cfg); tcRenderSheet(); tcRender();
+}
+function tcPreset(which){
+  const cfg = tcCfg();
+  cfg.stick.up    = which === 'wasd' ? 'w' : 'ArrowUp';
+  cfg.stick.down  = which === 'wasd' ? 's' : 'ArrowDown';
+  cfg.stick.left  = which === 'wasd' ? 'a' : 'ArrowLeft';
+  cfg.stick.right = which === 'wasd' ? 'd' : 'ArrowRight';
+  tcSave(cfg); tcRenderSheet(); tcRender();
+}
+function tcSetBtn(id, field, v){
+  const cfg = tcCfg(), b = cfg.buttons.find(x => x.id === id);
+  if (!b) return;
+  b[field] = (field === 'key') ? tcPickKey(v, b.key) : v;
+  tcSave(cfg);
+  if (field === 'key') tcRenderSheet();
+  tcRender();
+}
+function tcAddBtn(){
+  const cfg = tcCfg();
+  const name = prompt('Button name (what you see on the pad):', 'Btn');
+  if (name === null) return;
+  const id = 'b' + Date.now().toString(36);
+  // Stagger new pads up the right edge so they never land on top of each other.
+  cfg.buttons.push({ id, label:(name.trim() || 'Btn').slice(0,6), key:'Enter',
+                     ax:'right', ay:'bottom', dx:50, dy:72 + cfg.buttons.length * 70 });
+  tcSave(cfg); tcRenderSheet(); tcRender();
+}
+function tcDelBtn(id){
+  const cfg = tcCfg();
+  cfg.buttons = cfg.buttons.filter(b => b.id !== id);
+  tcSave(cfg); tcRenderSheet(); tcRender();
+}
+function tcStartMove(){
+  // Dragging needs the pads on screen. Outside a game, show them over a dimmed
+  // backdrop so positions can be arranged any time.
+  document.getElementById('tcSheetOverlay').classList.remove('open');
+  if (!tcVisible()) document.getElementById('tcLayer').classList.add('preview');
+  tcSetMove(true);
+}
+function tcSetOpacity(v){
+  const cfg = tcCfg();
+  cfg.opacity = +v;
+  tcSave(cfg);
+  const l = document.getElementById('tcOpVal'); if (l) l.textContent = v + '%';
+  tcRender();
+}
+function tcReset(){
+  if (!confirm('Reset the joystick, buttons, positions and opacity to their defaults?')) return;
+  tcSave(JSON.parse(JSON.stringify(TC_DEFAULTS)));
+  tcRenderSheet(); tcRender();
+}
+
+// Keys must not stay stuck down when the game goes away or the tab is hidden.
+addEventListener('blur', tcReleaseAll);
+document.addEventListener('visibilitychange', () => { if (document.hidden) tcReleaseAll(); });
+addEventListener('resize', () => { if (tcVisible()) tcRender(); });
+
 function fsGame(){
+  // Fullscreen the FRAME CONTAINER, not the iframe: the touch pads are siblings
+  // of the iframe in this document, and fullscreening the iframe alone would put
+  // the game above them and swallow every tap. The iframe fills the container, so
+  // this looks identical either way.
   const f=document.getElementById('gframe');
-  (f.requestFullscreen||f.webkitRequestFullscreen||f.mozRequestFullScreen||(()=>{})).call(f);
+  const el=(touchOn() ? f.closest('.pframe') : f) || f;
+  (el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||(()=>{})).call(el);
 }
 
 
@@ -3679,6 +4489,9 @@ function loadWallpaperPreview() {
   }
 
   function init(){
+    setTouchMode(touchOn());   // paints the settings button, restores saved mode
+    tcMaybePrompt();
+
     document.querySelectorAll('.home-page,.games-content,.settings-page').forEach(el=>{
       setupMomentumScroll(el, 'y');
     });
@@ -3696,5 +4509,7 @@ function loadWallpaperPreview() {
 })();
 </script>
 
+<!-- LuminSDK — fourth game source (script itself served from jsDelivr) -->
+<script src="https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js"></script>
 </body>
 </html>
