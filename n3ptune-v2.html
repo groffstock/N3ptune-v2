@@ -1229,7 +1229,7 @@ body{font-weight:600}
         <div class="s-row">
           <div>
             <div class="s-label">Mirror</div>
-            <div class="s-desc">Choose which jsdelivr mirror to use for loading games</div>
+            <div class="s-desc">Choose which jsDelivr mirror to use for loading games</div>
           </div>
           <div style="display:flex;gap:6px;flex:1;max-width:280px">
             <select class="s-input" id="cdnSelect" onchange="setCdnManual(this.value)" style="flex:1"></select>
@@ -1442,6 +1442,13 @@ const CDN_MIRRORS = [
   'originfastly.jsdelivr.net',
 ];
 const CDN_MIRRORS_ALL = [...CDN_MIRRORS, 'cdn.staticdelivr.com'];
+// Settings shows mirrors as "jsDelivr 1…6" — the hostnames are noise to a user
+// picking one, and staticdelivr is deliberately NOT offered (it 301s .wasm to a
+// banned host and breaks Ruffle/Unity/Godot games).
+const cdnLabel = m => {
+  const i = CDN_MIRRORS.indexOf(m);
+  return i < 0 ? m : 'jsDelivr ' + (i + 1);
+};
 const CDN_TEST_PATH = '/gh/freebuisness/assets@main/zones.json';
 const ALL_CDN_HOSTS = /(\/\/)([a-z]+\.jsdelivr\.net)/g;
 
@@ -1512,14 +1519,18 @@ async function resolveCdn() {
   if (_cdnResolved) return _cdnHost;
   if (_cdnResolving) return _cdnResolving;
   _cdnResolving = (async () => {
-    // Check if user manually picked a CDN
+    // Check if user manually picked a CDN. Validate against CDN_MIRRORS, not
+    // CDN_MIRRORS_ALL: staticdelivr is no longer offered in settings, so anyone
+    // still pinned to it from an older build would be stuck on a mirror that
+    // 301s .wasm — with no way to see it. Drop the stale pick and re-rank.
     const saved = localStorage.getItem('n3_cdn');
-    if (saved && CDN_MIRRORS_ALL.includes(saved)) {
+    if (saved && CDN_MIRRORS.includes(saved)) {
       _cdnHost = saved;
       _cdnResolved = true;
-      console.log('[N3ptune] CDN (manual):', saved);
+      console.log('[N3ptune] CDN (manual):', cdnLabel(saved));
       return _cdnHost;
     }
+    if (saved) { localStorage.removeItem('n3_cdn'); console.log('[N3ptune] dropped unsupported saved CDN:', saved); }
     // Ping mirrors in parallel — test both availability AND a real file fetch.
     // Rank only jsDelivr mirrors (NOT staticdelivr): _cdnHost becomes the game
     // <base>, and staticdelivr 301s .wasm, so a staticdelivr base breaks Ruffle/
@@ -1567,14 +1578,14 @@ function setCdnManual(mirror) {
   GN_COVER = `https://${mirror}/gh/freebuisness/covers@main`;
   GN_HTML  = `https://${mirror}/gh/freebuisness/html@main`;
   Promise.allSettled([loadUGS(), loadGN()]).then(() => { render(); renderHome(); });
-  showN3Toast('CDN set to ' + mirror);
+  showN3Toast('CDN set to ' + cdnLabel(mirror));
 }
 
 async function testAllCdns() {
   const resultsEl = document.getElementById('cdnTestResults');
   if (!resultsEl) return;
   resultsEl.textContent = 'Testing all mirrors...';
-  const results = await Promise.all(CDN_MIRRORS_ALL.map(async mirror => {
+  const results = await Promise.all(CDN_MIRRORS.map(async mirror => {
     const t0 = Date.now();
     try {
       const r = await fetch(`https://${mirror}/gh/freebuisness/assets@main/zones.json`, {
@@ -1595,16 +1606,16 @@ async function testAllCdns() {
   resultsEl.innerHTML = results.map(r => {
     const active = r.mirror === _cdnHost ? ' <strong style="color:var(--accent2)">(active)</strong>' : '';
     return r.ok
-      ? `<span style="color:#4ade80">✓</span> <a href="#" onclick="setCdnManual('${r.mirror}');buildCdnSelect();return false;" style="color:var(--text)">${r.mirror}</a> — ${r.ms}ms${active}`
-      : `<span style="color:#f87171">✗</span> <span style="color:var(--muted)">${r.mirror} — blocked</span>`;
+      ? `<span style="color:#4ade80">✓</span> <a href="#" onclick="setCdnManual('${r.mirror}');buildCdnSelect();return false;" style="color:var(--text)">${cdnLabel(r.mirror)}</a> — ${r.ms}ms${active}`
+      : `<span style="color:#f87171">✗</span> <span style="color:var(--muted)">${cdnLabel(r.mirror)} — blocked</span>`;
   }).join('<br>');
 }
 
 function buildCdnSelect() {
   const sel = document.getElementById('cdnSelect');
   if (!sel) return;
-  sel.innerHTML = CDN_MIRRORS_ALL.map(m =>
-    `<option value="${m}"${m === _cdnHost ? ' selected' : ''}>${m}</option>`
+  sel.innerHTML = CDN_MIRRORS.map(m =>
+    `<option value="${m}"${m === _cdnHost ? ' selected' : ''}>${cdnLabel(m)}</option>`
   ).join('');
 }
 
@@ -1843,16 +1854,31 @@ async function loadLuminSdk(){
   const withTimeout = (p, ms, what) => Promise.race([
     p, new Promise((_, rej) => setTimeout(() => rej(new Error(what + ' timed out after ' + ms + 'ms')), ms))
   ]);
-  const out = [];
-  let page = 1, pages = 1;
+  // getGames() hands back a RANDOM SAMPLE of the catalogue, NOT a stable page:
+  // asking for page 1 twice returns ~12 of the same 100 ids, and page 2 overlaps
+  // page 1 just as much. Straight paging therefore returns 2-5 copies of most
+  // games while missing others entirely (measured on the naive version: 1169
+  // rows, 772 unique, 397 duplicate rows, worst title ×5).
+  // So: collect into a Map keyed by id, WRAP AROUND the pages rather than
+  // stopping at the last one, and keep asking until the catalogue stops growing.
+  // NEVER remove this dedupe — page order alone can't enumerate the catalogue.
+  // (search() is stable but caps at 24 results and ignores `page`, so it can't
+  // enumerate the tail either. Don't retry that idea.)
+  const REQ_BUDGET = 45;      // hard ceiling so a pathological catalogue can't spin
+  const BARREN_LIMIT = 5;     // consecutive requests that added nothing new = done
+  const byId = new Map();
+  let page = 1, pages = 1, reqs = 0, barren = 0, total = 0;
   try {
     do {
+      const before = byId.size;
       const r = await withTimeout(Lumin.getGames({ limit:100, page }), 15000, 'getGames(page ' + page + ')');
+      reqs++;
       const games = (r && r.games) || [];
-      pages = (r && r.pages) || 1;
+      if (r && r.pages) pages = r.pages;
+      if (r && r.total) total = r.total;
       games.forEach(g => {
-        if (!g || !g.id) return;
-        out.push({
+        if (!g || !g.id || byId.has(g.id)) return;   // ← the dedupe
+        byId.set(g.id, {
           _src:'luminsdk', _key:'luminsdk_'+g.id, _id:g.id,
           name: g.name || titleize(String(g.id).split('/').pop()),
           // image_token already carries the game path, so the icon URL is just a join
@@ -1862,17 +1888,20 @@ async function loadLuminSdk(){
           tags:[], featured:false,
         });
       });
-      page++;
-    } while (page <= pages && page <= 30);
+      if (total && byId.size >= total) break;        // got the whole catalogue
+      barren = byId.size > before ? 0 : barren + 1;
+      page = page >= pages ? 1 : page + 1;           // wrap — there is no last page to stop on
+    } while (reqs < REQ_BUDGET && barren < BARREN_LIMIT);
   } catch(e){
     console.warn('[N3ptune] LuminSDK: ' + (e && e.message ? e.message : e));
     if (location.protocol === 'file:')
       console.warn('[N3ptune] LuminSDK needs the page served over http(s) — a file:// page cannot reach its API, so it shows 0 games. The other three sources are unaffected.');
-    if (!out.length) { luminsdkGames = []; return; }   // partial pages are still worth showing
+    if (!byId.size) { luminsdkGames = []; return; }   // partial passes are still worth showing
   }
-  luminsdkGames = out;
+  luminsdkGames = [...byId.values()];
   luminsdkGames.sort((a,b)=>a.name.localeCompare(b.name));
-  console.log('[N3ptune] LuminSDK loaded ('+luminsdkGames.length+' games)');
+  // The tail is sampled, so the count wobbles by a few between loads. That's the API, not a bug.
+  console.log('[N3ptune] LuminSDK loaded ('+luminsdkGames.length+(total?'/'+total:'')+' unique games, '+reqs+' requests)');
 }
 
 async function loadSeraph() {
@@ -3922,17 +3951,214 @@ function showN3Toast(msg, ok=true) {
   t._tid = setTimeout(() => { t.style.opacity = '0'; }, 3000);
 }
 
-function saveData() {
+// ─── IN-GAME PROGRESS CAPTURE ───────────────────────────────────────────
+// GN / Seraph / UGS games all run from frame.srcdoc with NO sandbox attribute,
+// so the frame INHERITS this page's origin: every localStorage key and every
+// IndexedDB database a game writes lands in OUR storage. THAT is the progress
+// a save file has to carry. Save files up to v2 carried only the played-game
+// list — a bookmark list — so loading one announced "restored" and every game
+// still opened blank. Anything not written by us is treated as game progress.
+//
+// LuminSDK games are a real cross-origin document on a.luminsdk.com; their
+// progress lives in that origin's storage and is unreachable from here. That's
+// stated in the toast rather than being silently missing.
+const N3_OWN_KEY = /^(n3_|n3ptune_)/;
+// Unity's asset download cache: re-downloadable, routinely tens of MB, never
+// save data. Every other database is game progress and gets exported.
+const IDB_SKIP = /^UnityCache$/;
+
+// btoa needs a binary string; fromCharCode(...huge) overflows the call stack.
+function _b64enc(u8){
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function _b64dec(b){
+  const s = atob(b), u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u;
+}
+
+// JSON cannot hold what IDBFS actually stores: Unity/Godot keep file contents as
+// Uint8Array, and a plain stringify turns those into {"0":12,"1":34,…} which
+// restores as an Object and corrupts the save. Tag the types we really meet.
+async function _packVal(v){
+  if (v == null || typeof v !== 'object') return v;
+  if (v instanceof Date)        return { __n3t:'date', v: v.getTime() };
+  if (v instanceof Blob)        return { __n3t:'blob', mime: v.type, v: _b64enc(new Uint8Array(await v.arrayBuffer())) };
+  if (v instanceof ArrayBuffer) return { __n3t:'ab',   v: _b64enc(new Uint8Array(v)) };
+  if (ArrayBuffer.isView(v))    return { __n3t: v.constructor.name, v: _b64enc(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)) };
+  if (Array.isArray(v)) return Promise.all(v.map(_packVal));
+  const o = {};
+  for (const k of Object.keys(v)) o[k] = await _packVal(v[k]);
+  return o;
+}
+function _unpackVal(v){
+  if (v == null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map(_unpackVal);
+  if (typeof v.__n3t === 'string') {
+    if (v.__n3t === 'date') return new Date(v.v);
+    const u = _b64dec(v.v);
+    if (v.__n3t === 'blob') return new Blob([u], { type: v.mime || '' });
+    if (v.__n3t === 'ab')   return u.buffer;
+    if (v.__n3t === 'DataView') return new DataView(u.buffer);
+    const C = window[v.__n3t];
+    if (typeof C !== 'function' || !C.BYTES_PER_ELEMENT) return u;
+    return new C(u.buffer, 0, u.byteLength / C.BYTES_PER_ELEMENT);
+  }
+  const o = {};
+  for (const k of Object.keys(v)) o[k] = _unpackVal(v[k]);
+  return o;
+}
+
+// Every localStorage key that isn't ours.
+function _collectLocal(){
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || N3_OWN_KEY.test(k)) continue;
+    try { out[k] = localStorage.getItem(k); } catch(e){}
+  }
+  return out;
+}
+
+// Firefox only shipped databases() in 126; without it there is nothing to
+// enumerate, so IndexedDB progress simply isn't part of the file there.
+function _idbList(){
+  try {
+    if (indexedDB.databases) return indexedDB.databases().then(l => l.map(d => d.name).filter(Boolean), () => []);
+  } catch(e){}
+  return Promise.resolve([]);
+}
+
+// Read one database whole: schema + every row of every store.
+function _idbDump(name){
+  return new Promise(res => {
+    let req;
+    try { req = indexedDB.open(name); } catch(e){ return res(null); }
+    req.onerror = req.onblocked = () => res(null);
+    // open() with no version on a database that doesn't exist CREATES it; bail.
+    req.onupgradeneeded = () => { try { req.transaction.abort(); } catch(e){} res(null); };
+    req.onsuccess = () => {
+      const db = req.result, names = [...db.objectStoreNames];
+      const out = { version: db.version, stores: {} };
+      if (!names.length) { db.close(); return res(out); }
+      let tx;
+      try { tx = db.transaction(names, 'readonly'); } catch(e){ db.close(); return res(null); }
+      names.forEach(n => {
+        const os = tx.objectStore(n);
+        const st = { keyPath: os.keyPath, autoIncrement: os.autoIncrement, indexes: [], rows: [] };
+        for (const ixn of os.indexNames) {
+          const ix = os.index(ixn);
+          st.indexes.push({ name: ixn, keyPath: ix.keyPath, unique: ix.unique, multiEntry: ix.multiEntry });
+        }
+        out.stores[n] = st;
+        // Collect raw here — awaiting inside a cursor would close the transaction.
+        const cur = os.openCursor();
+        cur.onsuccess = e => {
+          const c = e.target.result;
+          if (!c) return;
+          st.rows.push({ k: os.keyPath ? null : c.key, v: c.value });
+          c.continue();
+        };
+      });
+      tx.oncomplete = () => { db.close(); res(out); };
+      tx.onerror = tx.onabort = () => { db.close(); res(out); };
+    };
+  });
+}
+
+// Binary-safe encode of a finished dump (done after the transaction closes).
+async function _idbPack(dump){
+  for (const st of Object.values(dump.stores)) {
+    st.rows = await Promise.all(st.rows.map(async r => ({
+      k: r.k == null ? null : await _packVal(r.k),
+      v: await _packVal(r.v)
+    })));
+  }
+  return dump;
+}
+
+// Recreate a database from a dump: drop it, rebuild the exact schema, refill.
+function _idbRestore(name, dump){
+  return new Promise(resolve => {
+    let del;
+    try { del = indexedDB.deleteDatabase(name); } catch(e){ return resolve(false); }
+    del.onsuccess = del.onerror = del.onblocked = () => {
+      const names = Object.keys(dump.stores || {});
+      let req;
+      try { req = indexedDB.open(name, dump.version || 1); } catch(e){ return resolve(false); }
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        names.forEach(n => {
+          const st = dump.stores[n];
+          let os;
+          try {
+            os = db.createObjectStore(n, {
+              keyPath: st.keyPath == null ? undefined : st.keyPath,
+              autoIncrement: !!st.autoIncrement
+            });
+          } catch(e){ return; }
+          (st.indexes || []).forEach(ix => {
+            try { os.createIndex(ix.name, ix.keyPath, { unique: !!ix.unique, multiEntry: !!ix.multiEntry }); } catch(e){}
+          });
+        });
+      };
+      req.onerror = req.onblocked = () => resolve(false);
+      req.onsuccess = () => {
+        const db = req.result;
+        if (!names.length) { db.close(); return resolve(true); }
+        let tx;
+        try { tx = db.transaction(names, 'readwrite'); } catch(e){ db.close(); return resolve(false); }
+        names.forEach(n => {
+          const st = dump.stores[n], os = tx.objectStore(n);
+          (st.rows || []).forEach(r => {
+            try {
+              const val = _unpackVal(r.v);
+              if (st.keyPath != null) os.put(val);
+              else os.put(val, _unpackVal(r.k));
+            } catch(e){}
+          });
+        });
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onerror = tx.onabort = () => { db.close(); resolve(false); };
+      };
+    };
+  });
+}
+
+function _fmtSize(n){
+  return n < 1024 ? n + ' B'
+       : n < 1048576 ? (n/1024).toFixed(0) + ' KB'
+       : (n/1048576).toFixed(1) + ' MB';
+}
+
+async function saveData() {
   try {
     const unified = getUnified();
     const played = unified.filter(g => playedGames.has(g._key));
+    showN3Toast('⏳ Collecting game progress…');
+
+    const local = _collectLocal();
+    const idb = {};
+    for (const name of await _idbList()) {
+      if (IDB_SKIP.test(name)) continue;
+      const d = await _idbDump(name);
+      if (d) { try { idb[name] = await _idbPack(d); } catch(e){} }
+    }
+    const nLocal = Object.keys(local).length, nIdb = Object.keys(idb).length;
+    const nLumin = played.filter(g => g._src === 'luminsdk').length;
+
     const payload = {
-      version: 2,
+      version: 3,
       savedAt: new Date().toISOString(),
       site: 'N3ptune',
       games: played.map(g => ({
         key: g._key, name: g.name, src: g._src, url: g.url, cover: g.cover || null,
       })),
+      // The actual game saves — what makes this more than a bookmark list.
+      progress: { local, idb },
+      luminExcluded: nLumin,
       settings: {
         theme: localStorage.getItem('n3_theme') || 'default',
         wallpaper: localStorage.getItem('n3_wallpaper') || null,
@@ -3941,15 +4167,25 @@ function saveData() {
       }
     };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify([...playedGames])); } catch(e) {}
-    const json = JSON.stringify(payload, null, 2);
+
+    // Blob, not a data: URI — progress payloads run to megabytes.
+    const json = JSON.stringify(payload);
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     const a = document.createElement('a');
-    a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+    a.href = url;
     a.download = 'n3ptune-save-' + new Date().toISOString().slice(0,10) + '.n3pt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+
     renderSavedList();
-    showN3Toast('✅ Saved! (' + played.length + ' game' + (played.length===1?'':'s') + ')');
+    console.log('[N3ptune] saved', played.length, 'games,', nLocal, 'localStorage keys,',
+                nIdb, 'IndexedDB databases —', _fmtSize(json.length));
+    showN3Toast('✅ Saved — ' + played.length + ' game' + (played.length===1?'':'s') + ', '
+      + (nLocal + nIdb) + ' progress entr' + ((nLocal + nIdb)===1?'y':'ies')
+      + ' (' + _fmtSize(json.length) + ')'
+      + (nLumin ? ' · LuminSDK progress can\'t be exported' : ''));
   } catch(err) {
     showN3Toast('❌ Save failed: ' + err.message, false);
   }
@@ -3966,12 +4202,29 @@ function loadData() {
     document.body.removeChild(input);
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(ev) {
+    reader.onload = async function(ev) {
+      let payload;
+      try { payload = JSON.parse(ev.target.result); }
+      catch(err) { return showN3Toast('❌ Invalid save file.', false); }
       try {
-        const payload = JSON.parse(ev.target.result);
+        // A running game would flush its own state over whatever we restore.
+        if (document.getElementById('player').classList.contains('open')) closeGame();
+
         const keys = (payload.games || []).map(g => g.key);
         keys.forEach(k => playedGames.add(k));
         persistPlayed();
+
+        const p = payload.progress || {};
+        let nLocal = 0, nIdb = 0;
+        for (const [k, v] of Object.entries(p.local || {})) {
+          if (N3_OWN_KEY.test(k)) continue;   // never let a file overwrite our own state
+          try { localStorage.setItem(k, v); nLocal++; } catch(e){}
+        }
+        showN3Toast('⏳ Restoring game progress…');
+        for (const [name, dump] of Object.entries(p.idb || {})) {
+          if (await _idbRestore(name, dump)) nIdb++;
+        }
+
         if (payload.settings) {
           const s = payload.settings;
           if (s.theme) { localStorage.setItem('n3_theme', s.theme); applyTheme(s.theme); }
@@ -3985,9 +4238,18 @@ function loadData() {
           }
         }
         renderSavedList();
-        showN3Toast('✅ Loaded! ' + keys.length + ' game' + (keys.length===1?'':'s') + ' restored.');
+        console.log('[N3ptune] loaded', keys.length, 'games,', nLocal, 'localStorage keys,',
+                    nIdb, 'IndexedDB databases');
+        // Old files genuinely have no progress in them — don't claim otherwise.
+        if (!payload.progress) {
+          showN3Toast('⚠️ Old save file: ' + keys.length + ' game' + (keys.length===1?'':'s')
+            + ' listed, but it holds no in-game progress. Re-save to capture it.', false);
+        } else {
+          showN3Toast('✅ Loaded — ' + keys.length + ' game' + (keys.length===1?'':'s') + ', '
+            + (nLocal + nIdb) + ' progress entr' + ((nLocal + nIdb)===1?'y':'ies') + ' restored');
+        }
       } catch(err) {
-        showN3Toast('❌ Invalid save file.', false);
+        showN3Toast('❌ Load failed: ' + err.message, false);
       }
     };
     reader.readAsText(file);
