@@ -21,6 +21,8 @@
   --c-gn: #fc2651;
   --c-seraph: #a855f7;
   --c-luminsdk: #3b82f6;
+  --c-noah: #10b981;
+  --c-tglsc: #9ca3af;
   --sidebar-w: 56px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -459,7 +461,7 @@ body{
 .gname{font-size:13.2px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 .gsub{font-size:10.9px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px}
 .gsrc-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.gsrc-dot.gn{background:var(--c-gn)}.gsrc-dot.ugs{background:var(--c-ugs)}.gsrc-dot.seraph{background:var(--c-seraph)}.gsrc-dot.luminsdk{background:var(--c-luminsdk)}
+.gsrc-dot.gn{background:var(--c-gn)}.gsrc-dot.ugs{background:var(--c-ugs)}.gsrc-dot.seraph{background:var(--c-seraph)}.gsrc-dot.luminsdk{background:var(--c-luminsdk)}.gsrc-dot.noah{background:var(--c-noah)}.gsrc-dot.tglsc{background:var(--c-tglsc)}
 .play-btn{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(37,99,235,.88);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .13s;font-size:11.5px;color:#fff}
 
 /* ═══ PLAYER ═══ */
@@ -487,7 +489,7 @@ body{
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{font-size:13.8px;color:var(--muted2)}
 .lsrc{font-size:10.9px;margin-top:-4px;font-weight:700;letter-spacing:.08em}
-.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}.lsrc.luminsdk{color:#93c5fd}
+.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}.lsrc.luminsdk{color:#93c5fd}.lsrc.noah{color:#6ee7b7}.lsrc.tglsc{color:#d1d5db}
 
 /* ═══ TOUCH CONTROLS (mobile mode) ═══
    The layer sits ABOVE the game iframe in the parent document; only the pads
@@ -677,10 +679,12 @@ body{
 .src-filter-btn.on.sf-ugs{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3);color:#fcd34d}
 .src-filter-btn.on.sf-seraph{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.3);color:#d8b4fe}
 .src-filter-btn.on.sf-luminsdk{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.35);color:#93c5fd}
+.src-filter-btn.on.sf-noah{background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.35);color:#6ee7b7}
+.src-filter-btn.on.sf-tglsc{background:rgba(156,163,175,.16);border-color:rgba(156,163,175,.4);color:#d1d5db}
 .sf-dot.gn{background:var(--c-gn)}
 .sf-dot.ugs{background:var(--c-ugs)}
 .sf-dot.seraph{background:var(--c-seraph)}
-.sf-dot.luminsdk{background:var(--c-luminsdk)}
+.sf-dot.luminsdk{background:var(--c-luminsdk)}.sf-dot.noah{background:var(--c-noah)}.sf-dot.tglsc{background:var(--c-tglsc)}
 
 /* ═══ v2 HOME REDESIGN ═══ */
 .home-page{
@@ -721,6 +725,44 @@ body{
 .pop-name{font-size:10.9px;color:var(--muted2);max-width:66px;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;font-weight:600}
 .pop-card.blocked{filter:grayscale(1);opacity:.4;pointer-events:none}
+.pop-ph{width:66px;height:66px;border-radius:16px;background:var(--panel2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.45)}
+.pop-label-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:13px}
+.pop-label-row .pop-label{margin-bottom:0}
+.pop-edit{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:12px;
+  border:1px solid var(--border);background:var(--panel2);color:var(--muted2);cursor:pointer;
+  font-family:'Fredoka',sans-serif;font-size:11px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;transition:color .15s,border-color .15s}
+.pop-edit:hover{color:var(--text);border-color:rgba(96,165,250,.5)}
+/* ── Edit-popular modal ── */
+.pe-search{width:100%;height:38px;padding:0 12px;margin-bottom:14px;border-radius:10px;
+  border:1px solid var(--border);background:var(--panel2);color:var(--text);
+  font-family:'Fredoka',sans-serif;font-size:13.8px;font-weight:600;outline:0}
+.pe-search:focus{border-color:var(--accent2)}
+.pe-sec{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+  margin:16px 0 8px}
+.pe-list{display:flex;flex-direction:column;gap:6px;max-height:230px;overflow:auto}
+.pe-item{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;
+  border:1px solid var(--border);background:var(--panel2)}
+.pe-item img,.pe-item .pe-ph{width:34px;height:34px;border-radius:8px;object-fit:cover;flex:0 0 auto;
+  background:var(--bg);border:1px solid var(--border)}
+.pe-nm{flex:1;min-width:0;font-size:13.2px;font-weight:600;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pe-src{font-size:10.5px;font-weight:700;color:var(--muted);flex:0 0 auto}
+.pe-btn{flex:0 0 auto;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:16px;line-height:1;
+  border:1px solid var(--border);background:transparent;color:var(--muted2);
+  display:flex;align-items:center;justify-content:center}
+.pe-btn:hover{color:var(--text);background:var(--panel)}
+.pe-btn.add:hover{color:#4ade80;border-color:rgba(74,222,128,.45)}
+.pe-btn.rm:hover{color:#f87171;border-color:rgba(248,113,113,.45)}
+.pe-empty{font-size:12.8px;color:var(--muted);padding:10px 2px}
+.pe-foot{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:18px;
+  padding-top:14px;border-top:1px solid var(--border)}
+.pe-reset{height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--border);background:transparent;
+  color:var(--muted2);cursor:pointer;font-family:'Fredoka',sans-serif;font-size:12.6px;font-weight:700}
+.pe-reset:hover{color:var(--text);border-color:rgba(96,165,250,.5)}
+.pe-done{height:34px;padding:0 18px;border-radius:9px;border:0;background:var(--accent);color:#fff;
+  cursor:pointer;font-family:'Fredoka',sans-serif;font-size:12.6px;font-weight:700}
 
 .home-actions{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;justify-content:center}
 .home-actions button{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;
@@ -1154,7 +1196,13 @@ body{font-weight:600}
       <p class="home-tag">Play anything. Always free, always unblocked.</p>
 
       <div class="pop-strip">
-        <div class="pop-label">Popular now</div>
+        <div class="pop-label-row">
+          <div class="pop-label">Popular now</div>
+          <button class="pop-edit" onclick="openPopEdit()" title="Choose which games appear here">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            Edit games
+          </button>
+        </div>
         <div class="pop-row" id="popular-row"></div>
       </div>
 
@@ -1204,6 +1252,12 @@ body{font-weight:600}
         </button>
         <button class="src-filter-btn sf-luminsdk on" id="sfbtn-luminsdk" onclick="toggleSrc('luminsdk')">
           <span class="sf-dot luminsdk"></span>LuminSDK
+        </button>
+        <button class="src-filter-btn sf-noah on" id="sfbtn-noah" onclick="toggleSrc('noah')">
+          <span class="sf-dot noah"></span>Noah's Tutoring
+        </button>
+        <button class="src-filter-btn sf-tglsc on" id="sfbtn-tglsc" onclick="toggleSrc('tglsc')">
+          <span class="sf-dot tglsc"></span>TGLSC
         </button>
       </div>
     </div>
@@ -1366,12 +1420,32 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.1</span><span class="cl-date">Jul 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.2 (GD REFERENCE???)</span><span class="cl-date">Jul 2026</span></div>
       <ul>
-        <li>Added touchscreen controls for mobile devices (mobile mode) and mobile detection for mobile mode</li>
-        <li>Added LuminSDK, 1153 new games</li>
-        <li>Fixed some minor bugs and had minor log changes</li>
+        <li>Added new CDN: Noah's Tutoring</li>
+        <li>Added new CDN: TGLSC (Doesn't work for now, will start working in october/september)</li>
+        <li>Added changing suggested games manually</li>
       </ul>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT "POPULAR NOW" -->
+<div class="cl-overlay" id="popEditOverlay" onclick="if(event.target===this)closePopEdit()">
+  <div class="cl-modal">
+    <div class="cl-head">
+      <div class="cl-title">Edit “Popular now”</div>
+      <button class="cl-x" onclick="closePopEdit()">&times;</button>
+    </div>
+    <div class="cl-sub">Pick the games that show on your home page. Saved on this device.</div>
+    <div class="pe-sec" id="pe-count">Your games</div>
+    <div class="pe-list" id="pe-current"></div>
+    <div class="pe-sec">Add a game</div>
+    <input class="pe-search" id="pe-search" type="text" placeholder="Search all games&#8230;" autocomplete="off" spellcheck="false">
+    <div class="pe-list" id="pe-results"></div>
+    <div class="pe-foot">
+      <button class="pe-reset" onclick="resetPopPicks()">Reset to default</button>
+      <button class="pe-done" onclick="closePopEdit()">Done</button>
     </div>
   </div>
 </div>
@@ -1655,10 +1729,10 @@ const GL_TREE = p => GL_APIROOT + 'tree?ref=' + GL_REF + '&per_page=100&path=' +
 
 let GN_COVER = "https://cdn.jsdelivr.net/gh/freebuisness/covers@main";
 let GN_HTML  = "https://cdn.jsdelivr.net/gh/freebuisness/html@main";
-let gnZones = [], ugsGames = [], seraphGames = [], luminsdkGames = [];
+let gnZones = [], ugsGames = [], seraphGames = [], luminsdkGames = [], noahGames = [], tglscGames = [];
 let gnPop = {};
-const SRC_LABEL = { gn:'GN-Math', ugs:'UGS', seraph:'Seraph', luminsdk:'LuminSDK' };
-let activeSrcs = new Set(['gn','ugs','seraph','luminsdk']);
+const SRC_LABEL = { gn:'GN-Math', ugs:'UGS', seraph:'Seraph', luminsdk:'LuminSDK', noah:"Noah's Tutoring", tglsc:'TGLSC' };
+let activeSrcs = new Set(['gn','ugs','seraph','luminsdk','noah','tglsc']);
 let activeSrc  = 'all'; // kept for compat
 let activeView = 'all';
 let activeSearch = '';
@@ -1720,7 +1794,7 @@ async function loadAll() {
   await resolveCdn().catch(() => {});
   GN_COVER = `https://${_cdnHost}/gh/freebuisness/covers@main`;
   GN_HTML  = `https://${_cdnHost}/gh/freebuisness/html@main`;
-  await Promise.allSettled([ ugsP, loadSeraph().then(rerender), loadGN().then(rerender), loadLuminSdk().then(rerender).catch(()=>{}) ]);
+  await Promise.allSettled([ ugsP, loadSeraph().then(rerender), loadGN().then(rerender), loadNoah().then(rerender).catch(()=>{}), loadLuminSdk().then(rerender).catch(()=>{}), loadTglsc().then(rerender).catch(()=>{}) ]);
   rerender();
 }
 
@@ -1904,6 +1978,347 @@ async function loadLuminSdk(){
   console.log('[N3ptune] LuminSDK loaded ('+luminsdkGames.length+(total?'/'+total:'')+' unique games, '+reqs+' requests)');
 }
 
+// ═══════════════════════════════════════════════════════════
+//  TGLSC — sixth source (grey)
+//  Unlike every other source, TGLSC is NOT static files on a CDN we can reach:
+//  it's a hosted site (glseries.net) that we tunnel to with libcurl.js over a
+//  WISP relay — the exact transport gust-plus-proxied.html uses and the same one
+//  GUST.html ships with. Nothing here ever touches glseries.net directly, so the
+//  source keeps working where that domain is filtered.
+//    • catalogue JSON  → _tgPx()
+//    • thumbnails      → tunnelled into blob: URLs, lazily (covers are BIG here:
+//                        measured 3.7 MB / 1.0 MB / 978 KB in the first ten)
+//    • game pages      → shell fetched through the tunnel, its static refs
+//                        inlined as data: URLs, and everything the game asks for
+//                        at runtime caught by an in-frame shim (_tgShim)
+//  Nothing is cached in localStorage beyond the catalogue: the games are a live
+//  site, not immutable CDN files.
+// ═══════════════════════════════════════════════════════════
+const TG_API='https://glseries.net/api/cdn', TG_ORIGIN='https://glseries.net';
+// Benchmarked relay pool, fastest first. Tried in order until one completes a
+// REAL request — a socket that opens still can't be trusted until it has carried
+// a response.
+const TG_WISPS=['wss://definitelyscience.com/wisp/','wss://mages.io/wisp/','wss://lichology.com/wisp/',
+  'wss://motor-cycle-part.org/wisp/','wss://wisp.terbiumon.top/wisp/','wss://anura.pro/',
+  'wss://wisp.mercurywork.shop/'];
+const TG_PROBE_MS=6000;
+let _tgSession=null, _tgWisp='', _tgConnecting=null;
+
+function _tgAbs(u,base){ if(!u) return '';
+  if(/^(https?:|data:|blob:)/.test(u)) return u;
+  try{ return new URL(u, base||TG_ORIGIN).href }catch(e){ return TG_ORIGIN+u } }
+
+// libcurl.js declares `libcurl` as a LEXICAL top-level binding, so window.libcurl
+// is undefined even once it has loaded — probe the bare identifier.
+function _tgWaitLc(){ return new Promise((res,rej)=>{ let t=0; (function w(){
+  if (window._lcErr) return rej(new Error('libcurl.js could not be fetched from jsDelivr'));
+  if (window._lcReady && typeof libcurl!=='undefined') return res();
+  if ((t+=100) > 20000) return rej(new Error('libcurl.js never loaded'));
+  setTimeout(w,100); })(); }); }
+
+// A probe with no deadline is not a probe: libcurl never times a request out on
+// its own, so an origin that completes the handshake then says nothing parks the
+// first await forever. Bound it with libcurl's own AbortSignal — NOT
+// Promise.race, which abandons the transfer while it keeps running inside the
+// WASM event loop and then throws "memory access out of bounds" on every tick.
+function _tgDeadline(ms){ const a=new AbortController(), t=setTimeout(()=>a.abort(), ms);
+  return { signal:a.signal, done(){ clearTimeout(t) } }; }
+// Abandoning a request leaves the session spinning: the abort settles the JS
+// promise but never runs the WASM end callback, so active_requests stays above
+// zero and close() frees the session pointer WITHOUT clearing that interval.
+// Stop the loop first, then close.
+function _tgKill(s){ if(!s) return;
+  try{ if(s.event_loop){ clearInterval(s.event_loop); s.event_loop=null; } }catch(e){}
+  try{ s.close && s.close(); }catch(e){} }
+
+function _tgConnect(){
+  if (_tgSession) return Promise.resolve(_tgSession);
+  if (_tgConnecting) return _tgConnecting;
+  _tgConnecting = (async () => {
+    await _tgWaitLc();
+    await libcurl.load_wasm();
+    let last;
+    for (let i=0;i<TG_WISPS.length;i++){
+      const dl=_tgDeadline(TG_PROBE_MS);
+      let s;
+      try{
+        libcurl.set_websocket(TG_WISPS[i]);
+        s=new libcurl.HTTPSession();
+        const r=await s.fetch(TG_API,{signal:dl.signal});
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const j=await r.json();
+        if(!j||!j.data) throw new Error('bad payload');
+        _tgSession=s; _tgWisp=TG_WISPS[i];
+        console.log('[N3ptune] TGLSC tunnel up via '+_tgWisp);
+        return j;
+      }catch(e){ last=e; _tgKill(s); }
+      finally{ dl.done(); }
+    }
+    throw last || new Error('no WISP relay reachable');
+  })();
+  _tgConnecting.catch(()=>{ _tgConnecting=null; });
+  return _tgConnecting;
+}
+function _tgPx(u,o){ if(!_tgSession) throw new Error('TGLSC tunnel not connected');
+  return _tgSession.fetch(u,o||{}); }
+async function _tgPxBuf(u){
+  const r=await _tgPx(u);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return { buf: await r.arrayBuffer(), mime:(r.headers.get('content-type')||'').split(';')[0] };
+}
+
+async function loadTglsc(){
+  let j;
+  try { j = await _tgConnect(); }
+  catch(e){
+    console.warn('[N3ptune] TGLSC unavailable: ' + (e && e.message ? e.message : e)
+      + ' — the site may be down or every relay blocked. Other sources are unaffected.');
+    tglscGames = [];
+    return;
+  }
+  const list=(j.data||[]).filter(x=>x&&x.title&&(x.embed_url||x.game_url));
+  tglscGames = list.map(g=>({
+    _src:'tglsc', _key:'tglsc_'+(g.id||g.slug), _id:g.id||g.slug,
+    name: g.title,
+    // thumbnail/game_url come back RELATIVE from the live API; embed_url absolute
+    cover: null,                       // real cover is a tunnelled blob (see _tgCover)
+    _cover: _tgAbs(g.thumbnail),
+    url:   _tgAbs(g.embed_url||g.game_url),
+    _tglsc:true,
+    tags: g.category ? [g.category] : [], featured: g.status==='popular',
+  }));
+  // popular first, then new, then A-Z — the API returns them unordered
+  const rank={popular:0,'new':1};
+  const st={}; list.forEach(g=>{ st['tglsc_'+(g.id||g.slug)]=g.status; });
+  tglscGames.sort((a,b)=>{
+    const x=rank[st[a._key]]==null?2:rank[st[a._key]], y=rank[st[b._key]]==null?2:rank[st[b._key]];
+    return x-y || a.name.localeCompare(b.name);
+  });
+  console.log('[N3ptune] TGLSC loaded ('+tglscGames.length+' games)');
+}
+
+// Covers are tunnelled too, so they can't be a plain <img src>. Resolve them
+// lazily as cards appear, four at a time — TGLSC's covers are large (3.7 MB at
+// the top end) and firing all of them at once starves the tunnel.
+const _tgCoverCache = {};
+let _tgCovQ = [], _tgCovActive = 0;
+function _tgQueueCover(g, card){
+  if (!g._cover) return;
+  const hit = _tgCoverCache[g._cover];
+  if (hit){ g.cover = hit; _tgPaintCover(card, hit, g.name); return; }
+  _tgCovQ.push([g, card]); _tgPumpCovers();
+}
+function _tgPumpCovers(){
+  while (_tgCovActive < 4 && _tgCovQ.length){
+    if (!_tgSession){ _tgCovQ.length = 0; return; }   // tunnel down — don't spin
+    const [g, card] = _tgCovQ.shift();
+    _tgCovActive++;
+    _tgPxBuf(g._cover).then(o => {
+      const u = URL.createObjectURL(new Blob([o.buf], { type:o.mime||'image/png' }));
+      _tgCoverCache[g._cover] = u; g.cover = u; _tgPaintCover(card, u, g.name);
+    }).catch(()=>{}).then(()=>{ _tgCovActive--; _tgPumpCovers(); });
+  }
+}
+function _tgPaintCover(card, url, name){
+  if (!card) return;
+  const ph = card.querySelector('.gcard-ph');
+  if (!ph) return;
+  const img = document.createElement('img');
+  img.className='gcard-img'; img.src=url; img.alt=name||'';
+  img.loading='lazy'; img.decoding='async';
+  ph.parentNode.insertBefore(img, ph);
+  ph.style.display='none';
+}
+
+// ── The in-frame shim (TGLSC only) ──────────────────────────────────────────
+// Runs first inside the game document. The game asks for relative URLs; we
+// resolve them against its real directory and hand them to the parent, which
+// fetches through the tunnel and posts the bytes back. The frame is srcdoc with
+// NO sandbox attribute, so it inherits this origin and can mint its own blob:
+// URLs — which is why blob works here even for stylesheets.
+// Known limit: SYNCHRONOUS XHR cannot be satisfied over an async tunnel.
+function _tgShimSrc(base){
+  function shim(){
+    var BASE='__BASE__', W=window.parent, seq=0, waiting={};
+    var _URL=window.URL;
+    function A(u){ try{ return new _URL(u,BASE).href }catch(e){ return u } }
+    // srcdoc means document.URL is "about:srcdoc" — not a valid base. Engines
+    // doing new URL(rel, document.URL) throw "Invalid URL" and die before paint.
+    function GURL(u,b){ try{ return new _URL(u,b) }catch(e){ return new _URL(u,BASE) } }
+    GURL.prototype=_URL.prototype;
+    GURL.createObjectURL=function(o){ return _URL.createObjectURL(o) };
+    GURL.revokeObjectURL=function(o){ return _URL.revokeObjectURL(o) };
+    try{ window.URL=GURL }catch(e){}
+    function skip(u){ return !u||/^(data:|blob:|javascript:|about:|#|mailto:)/i.test(u) }
+    function get(u){ return new Promise(function(res,rej){
+      var i=++seq; waiting[i]={res:res,rej:rej};
+      W.postMessage({__tg:1,id:i,url:A(u)},'*') }) }
+    addEventListener('message',function(e){
+      var d=e.data; if(!d||d.__tg!==2||!waiting[d.id])return;
+      var w=waiting[d.id]; delete waiting[d.id];
+      d.ok?w.res(d):w.rej(new Error(d.err||'proxy failed'));
+    });
+    function blobUrl(d,f){ return URL.createObjectURL(new Blob([d.buf],{type:d.mime||f||'application/octet-stream'})) }
+    var _f=window.fetch;
+    window.fetch=function(i,o){
+      var u=typeof i==='string'?i:(i&&i.url);
+      if(skip(u))return _f.apply(this,arguments);
+      return get(u).then(function(d){
+        return new Response(d.buf,{status:200,headers:{'content-type':d.mime||'application/octet-stream'}}) });
+    };
+    var XO=XMLHttpRequest.prototype.open, XS=XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open=function(m,u,as){ this.__u=u; this.__async=as!==false; return XO.apply(this,arguments) };
+    XMLHttpRequest.prototype.send=function(){
+      var x=this,u=x.__u;
+      if(skip(u)||!x.__async)return XS.apply(this,arguments);   // sync XHR: cannot tunnel
+      get(u).then(function(d){
+        var body=x.responseType==='arraybuffer'?d.buf:
+                 x.responseType==='blob'?new Blob([d.buf],{type:d.mime}):
+                 new TextDecoder().decode(d.buf);
+        Object.defineProperty(x,'response',{value:body,configurable:true});
+        if(!x.responseType||x.responseType==='text')
+          Object.defineProperty(x,'responseText',{value:body,configurable:true});
+        Object.defineProperty(x,'status',{value:200,configurable:true});
+        Object.defineProperty(x,'readyState',{value:4,configurable:true});
+        x.onreadystatechange&&x.onreadystatechange();
+        x.dispatchEvent(new Event('readystatechange')); x.dispatchEvent(new Event('load'));
+      }).catch(function(){ x.dispatchEvent(new Event('error')) });
+    };
+    function patch(proto,prop,mime){
+      var d=Object.getOwnPropertyDescriptor(proto,prop); if(!d||!d.set)return;
+      Object.defineProperty(proto,prop,{configurable:true,enumerable:d.enumerable,get:d.get,
+        set:function(v){ var el=this;
+          if(skip(v))return d.set.call(el,v);
+          get(v).then(function(o){ d.set.call(el,blobUrl(o,mime)) })
+                .catch(function(){ d.set.call(el,v) }) }});
+    }
+    patch(HTMLScriptElement.prototype,'src','text/javascript');
+    patch(HTMLImageElement.prototype,'src','image/png');
+    patch(HTMLLinkElement.prototype,'href','text/css');
+    patch(HTMLMediaElement.prototype,'src','audio/mpeg');
+    // TGLSC games ship an SDK that ALSO wraps Element.prototype.setAttribute and
+    // routes its own property setters through it. Assigning this[n]=v here would
+    // hand control to that wrapper, which calls setAttribute again — the two
+    // patches bounce off each other until the stack blows ("RangeError: Maximum
+    // call stack size exceeded" the moment a game boots). Resolve the URL here
+    // and finish with the ORIGINAL setAttribute.
+    var SA=Element.prototype.setAttribute;
+    Element.prototype.setAttribute=function(n,v){
+      var el=this,t=el.tagName;
+      if((n==='src'||n==='href')&&/^(SCRIPT|IMG|LINK|AUDIO|VIDEO|SOURCE)$/.test(t)&&!skip(v)){
+        var mime=t==='SCRIPT'?'text/javascript':t==='LINK'?'text/css':t==='IMG'?'image/png':'';
+        get(v).then(function(o){ SA.call(el,n,blobUrl(o,mime)) }).catch(function(){ SA.call(el,n,v) });
+        return;
+      }
+      return SA.apply(el,arguments) };
+    if(WebAssembly.instantiateStreaming){
+      WebAssembly.instantiateStreaming=function(p,im){
+        return Promise.resolve(p).then(function(r){return r.arrayBuffer()})
+          .then(function(b){return WebAssembly.instantiate(b,im)}) };
+    }
+    if(WebAssembly.compileStreaming){
+      WebAssembly.compileStreaming=function(p){
+        return Promise.resolve(p).then(function(r){return r.arrayBuffer()})
+          .then(function(b){return WebAssembly.compile(b)}) };
+    }
+  }
+  return '<scr'+'ipt>('+shim.toString().replace('__BASE__', base)+')()</scr'+'ipt>';
+}
+
+// Parent side of the shim protocol.
+addEventListener('message', function(e){
+  const d=e.data; if(!d||d.__tg!==1) return;
+  const src=e.source;
+  _tgPxBuf(d.url).then(o=>{
+    src.postMessage({__tg:2,id:d.id,ok:true,buf:o.buf,mime:o.mime},'*',[o.buf]);
+  }).catch(err=>{
+    src.postMessage({__tg:2,id:d.id,ok:false,err:String(err&&err.message||err)},'*');
+  });
+});
+
+function _tgB64(buf){ const u=new Uint8Array(buf); let s='';
+  for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
+  return btoa(s); }
+// Static refs are inlined as data: URLs BEFORE injection. srcdoc has no useful
+// base URL (a relative src would resolve against THIS page), and inlining keeps
+// scripts executing in document order, which a fetch-then-set rewrite would not.
+const TG_DROP=/cloudflareinsights|google-analytics|googletagmanager|doubleclick/i;
+async function _tgInline(html, base, log){
+  const re=/(<(?:script|link|img|source|audio|video)\b[^>]*?\b(?:src|href)\s*=\s*")([^"]+)(")/gi;
+  const jobs=[]; let m;
+  while((m=re.exec(html))){
+    const u=m[2];
+    if(/^(data:|blob:|javascript:|#|about:)/i.test(u)) continue;
+    jobs.push({raw:m[0],pre:m[1],url:u,post:m[3]});
+  }
+  const seen={};
+  await Promise.all(jobs.map(async j=>{
+    if(seen[j.url]!==undefined) return; seen[j.url]=null;
+    if(TG_DROP.test(j.url)){ seen[j.url]='data:text/javascript,'; return; }
+    try{ const o=await _tgPxBuf(_tgAbs(j.url,base));
+         seen[j.url]='data:'+(o.mime||'application/octet-stream')+';base64,'+_tgB64(o.buf); }
+    catch(e){ seen[j.url]='data:text/plain,'; }        // a missing asset ≠ dead launch
+  }));
+  jobs.forEach(j=>{ if(seen[j.url]) html=html.split(j.raw).join(j.pre+seen[j.url]+j.post); });
+  if(log) log('info','inlined '+Object.keys(seen).length+' static refs through the tunnel');
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NOAH'S TUTORING — fifth source (emerald)
+//  The catalogue is a plain script, games.js, holding
+//    const games = [ { title, desc, url, image }, … ]
+//  We keep only the title — descriptions are dropped per the user's request.
+//  Every entry ships raw.githubusercontent.com URLs, which the no-GitHub rule
+//  forbids, so each in-repo URL is rewritten onto jsDelivr (verified: both
+//  games/<id>.html and images/<file> serve 200 there).
+//  A minority of entries point at OTHER hosts entirely (githack, netlify,
+//  github.io, kartbros.io…). Those files are not in the repo, so no jsDelivr
+//  path exists for them and they are SKIPPED rather than smuggled in off-CDN.
+//  jsDelivr's package-metadata API returns 0 files for this repo, so games.js
+//  is the only usable index — which is fine, it is the canonical list anyway.
+// ═══════════════════════════════════════════════════════════
+const NOAH_REPO = 'NoahsAmazingTutoringHelp/Noahs-Calculus-Tutor', NOAH_REF = 'master';
+const NOAH_INREPO = /^https?:\/\/raw\.githubusercontent\.com\/NoahsAmazingTutoringHelp\/Noahs-Calculus-Tutor\/refs\/heads\/master\//i;
+
+async function loadNoah() {
+  const BASE = `https://${_cdnHost}/gh/${NOAH_REPO}@${NOAH_REF}/`;
+  // Cache only id/name/image-filename — never absolute URLs, so a later mirror
+  // change still produces correct links from the same cached list.
+  const games = await cachedList('noah_v1', async () => {
+    const res = await _origFetch(BASE + 'games.js', { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('noah games.js ' + res.status);
+    const txt = await res.text();
+    // Parse, don't execute: it's a script file, and the fields aren't uniform
+    // (one entry has no image at all).
+    const recs = txt.match(/\{[^{}]*title:[^{}]*\}/g) || [];
+    const F = (s, re) => { const m = re.exec(s); return m ? m[1] : null; };
+    const out = [], seen = new Set();
+    for (const r of recs) {
+      const title = F(r, /\btitle:\s*"((?:[^"\\]|\\.)*)"/);
+      const url   = F(r, /\burl:\s*"([^"]+)"/);
+      const image = F(r, /\bimage:\s*"([^"]+)"/);
+      if (!title || !url || !NOAH_INREPO.test(url)) continue;   // off-CDN entry
+      const id = url.split('/').pop().replace(/\.html?$/i, '');
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push({ id, name: title.trim(),
+                 img: (image && NOAH_INREPO.test(image)) ? image.split('/').pop() : null });
+    }
+    if (!out.length) throw new Error('noah: no games parsed');
+    return out;
+  });
+  noahGames = games.map(({ id, name, img }) => ({
+    _src:'noah', _key:'noah_'+id, _id:id,
+    name,
+    cover: img ? BASE + 'images/' + img : null,   // extensions vary: jpg/png/avif
+    url:   BASE + 'games/' + id + '.html',
+    tags: [], featured:false,
+  }));
+  noahGames.sort((a,b)=>a.name.localeCompare(b.name));
+  console.log('[N3ptune] Noah\'s Tutoring loaded ('+noahGames.length+' games)');
+}
+
 async function loadSeraph() {
   // Seraph's repo is metadata-blocked on jsDelivr's package API (403) and we
   // never touch github.com, so we enumerate a different compliant way: fetch the
@@ -1968,6 +2383,10 @@ function getUnified() {
     list.push(...seraphGames);
   if (activeSrcs.has('luminsdk'))
     list.push(...luminsdkGames);
+  if (activeSrcs.has('noah'))
+    list.push(...noahGames);
+  if (activeSrcs.has('tglsc'))
+    list.push(...tglscGames);
   return list;
 }
 
@@ -2059,6 +2478,8 @@ function _vsRenderBatch() {
       +`<div class="gsub"><span class="gsrc-dot ${g._src}"></span>${sub}</div></div>`
       +`<div class="play-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
     frag.appendChild(card);
+    // TGLSC covers live behind the tunnel, so they can't be a plain <img src>.
+    if (g._src==='tglsc' && !g.cover && g._cover) _tgQueueCover(g, card);
   }
   grid.appendChild(frag);
   _vsRendered = end;
@@ -2082,6 +2503,8 @@ function getAllGames() {
   list.push(...ugsGames);
   list.push(...seraphGames);
   list.push(...luminsdkGames);
+  list.push(...noahGames);
+  list.push(...tglscGames);
   return list;
 }
 
@@ -2150,7 +2573,11 @@ function injectLogos(){
 // ── Changelog modal ──
 function openChangelog(){ const o=document.getElementById('changelogOverlay'); if(o) o.classList.add('open'); }
 function closeChangelog(){ const o=document.getElementById('changelogOverlay'); if(o) o.classList.remove('open'); }
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeChangelog(); });
+document.addEventListener('keydown', e => { if(e.key==='Escape'){ closeChangelog(); closePopEdit(); } });
+document.addEventListener('DOMContentLoaded', () => {
+  const s = document.getElementById('pe-search');
+  if (s) s.addEventListener('input', renderPopEdit);
+});
 
 // ── Popular games for the home row: working titles only, NEVER GN-Math, never blocked ──
 // Curated "Popular now" titles, in display order. ALL popular games come from
@@ -2158,6 +2585,13 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') closeChangelog(
 // entries are just fallbacks if a curated pick is missing/blocked.
 const POPULAR_PICKS = [/slope/i,/drift hunters/i,/moto x3m/i,/ragdoll hit/i,/ragdoll archers/i,/highway racer 2/i,/snow rider/i,/escape road/i,/paper\.?io 2/i,/\bvex\b/i,/geometry dash/i,/subway/i,/stickman/i,/among us/i,/bitlife/i,/granny/i,/friday night|fnf/i,/eaglercraft|minecraft/i,/\b2048\b/i];
 function popularGames(n){
+  // A saved list wins over the curated default — including a deliberately empty
+  // one (the user removed everything), which must NOT silently fall back.
+  const saved = popPicks();
+  if (saved){
+    const all = getAllGames();
+    return saved.map(k => all.find(g => g._key === k)).filter(Boolean).slice(0, POP_MAX);
+  }
   const pool = getAllGames().filter(g => g && g._src === 'gn' && g.cover && !blockedGames.has(g._key));
   const picks = [], used = new Set();
   for (const re of POPULAR_PICKS){
@@ -2174,11 +2608,107 @@ function popularGames(n){
   }
   return picks.slice(0, n);
 }
-function popCard(g){
-  return `<div class="pop-card${blockedGames.has(g._key)?' blocked':''}" onclick="launch('${g._key}')" title="${esc(g.name)}">`
-    + `<img class="pop-thumb" src="${g.cover}" alt="${esc(g.name)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`
-    + `<span class="pop-name">${esc(g.name)}</span></div>`;
+// ── User-editable "Popular now" ─────────────────────────────────────────────
+// The curated POPULAR_PICKS list above stays the DEFAULT. Once someone edits the
+// row we store their chosen keys and use those instead — any source, in the order
+// they added them. Stored under an n3_ key so it is never mistaken for game
+// progress by the save system (N3_OWN_KEY), but it IS carried in a save file's
+// settings block so favourites travel with the export.
+const POP_KEY = 'n3_popular', POP_MAX = 18, POP_DEFAULT_N = 9;
+// The one source of truth for "what is on the home row right now". The editor and
+// the row MUST agree: asking popularGames() for POP_MAX while the row asked for
+// POP_DEFAULT_N made the editor list 18 curated games against a row of 9, which
+// then read as "already at the maximum" and disabled adding entirely.
+function popShowing(){ return popularGames(popPicks() ? POP_MAX : POP_DEFAULT_N); }
+function popPicks(){
+  try { const v = JSON.parse(localStorage.getItem(POP_KEY) || 'null');
+        return Array.isArray(v) ? v : null; } catch(e){ return null; }
 }
+function setPopPicks(keys){
+  try {
+    if (keys && keys.length) localStorage.setItem(POP_KEY, JSON.stringify(keys.slice(0, POP_MAX)));
+    else localStorage.removeItem(POP_KEY);          // empty === back to default
+  } catch(e){}
+  renderHome();
+  if (document.getElementById('popEditOverlay').classList.contains('open')) renderPopEdit();
+}
+function _q(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function popCard(g){
+  const thumb = g.cover
+    ? `<img class="pop-thumb" src="${g.cover}" alt="${esc(g.name)}" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`
+    : `<div class="pop-ph">${_IC_GAMEPAD}</div>`;   // custom picks may have no cover
+  return `<div class="pop-card${blockedGames.has(g._key)?' blocked':''}" onclick="launch('${_q(g._key)}')" title="${esc(g.name)}">`
+    + thumb + `<span class="pop-name">${esc(g.name)}</span></div>`;
+}
+
+function openPopEdit(){
+  const o = document.getElementById('popEditOverlay');
+  if (!o) return;
+  o.classList.add('open');
+  const s = document.getElementById('pe-search');
+  if (s){ s.value=''; setTimeout(()=>s.focus(),50); }
+  renderPopEdit();
+}
+function closePopEdit(){
+  const o = document.getElementById('popEditOverlay');
+  if (o) o.classList.remove('open');
+}
+function _peRow(g, mode){
+  const art = g.cover
+    ? `<img src="${g.cover}" alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'">`
+    : `<div class="pe-ph"></div>`;
+  const btn = mode==='rm'
+    ? `<button class="pe-btn rm" title="Remove" onclick="popRemove('${_q(g._key)}')">&times;</button>`
+    : `<button class="pe-btn add" title="Add" onclick="popAdd('${_q(g._key)}')">+</button>`;
+  return `<div class="pe-item">${art}<span class="pe-nm">${esc(g.name)}</span>`
+       + `<span class="pe-src">${esc(SRC_LABEL[g._src]||g._src)}</span>${btn}</div>`;
+}
+function renderPopEdit(){
+  const all = getAllGames();
+  const cur = popShowing();
+  const curKeys = new Set(cur.map(g=>g._key));
+  const custom = !!popPicks();
+
+  const lbl = document.getElementById('pe-count');
+  if (lbl) lbl.textContent = custom
+    ? 'Your games (' + cur.length + '/' + POP_MAX + ')'
+    : 'Your games — using the default set';
+
+  const curEl = document.getElementById('pe-current');
+  if (curEl) curEl.innerHTML = cur.length
+    ? cur.map(g=>_peRow(g,'rm')).join('')
+    : '<div class="pe-empty">No games yet — add some below.</div>';
+
+  const q = (document.getElementById('pe-search')||{}).value || '';
+  const res = document.getElementById('pe-results');
+  if (!res) return;
+  if (cur.length >= POP_MAX){
+    res.innerHTML = '<div class="pe-empty">That’s the maximum of '+POP_MAX+'. Remove one to add another.</div>';
+    return;
+  }
+  const s = q.trim().toLowerCase();
+  if (!s){ res.innerHTML = '<div class="pe-empty">Type to search '+all.length.toLocaleString()+' games.</div>'; return; }
+  const hits = all.filter(g => g && g.name && !curKeys.has(g._key) && g.name.toLowerCase().includes(s)).slice(0, 40);
+  res.innerHTML = hits.length
+    ? hits.map(g=>_peRow(g,'add')).join('')
+    : '<div class="pe-empty">Nothing matches “'+esc(q)+'”.</div>';
+}
+function popAdd(key){
+  // First edit starts from whatever is on screen now, so nothing vanishes.
+  const cur = (popPicks() || popShowing().map(g=>g._key)).slice(0, POP_MAX);
+  if (cur.includes(key) || cur.length >= POP_MAX) return;
+  cur.push(key);
+  setPopPicks(cur);
+}
+function popRemove(key){
+  const cur = (popPicks() || popShowing().map(g=>g._key)).filter(k => k !== key);
+  // An empty list would silently fall back to the default, which reads as "my
+  // removal did nothing" — keep it explicitly empty instead.
+  try { localStorage.setItem(POP_KEY, JSON.stringify(cur)); } catch(e){}
+  renderHome(); renderPopEdit();
+}
+function resetPopPicks(){ setPopPicks(null); }
 
 function renderHome(){
   const all = getAllGames();
@@ -2187,10 +2717,14 @@ function renderHome(){
 
   const row = document.getElementById('popular-row');
   if (row){
-    const picks = popularGames(9);
+    const picks = popShowing();
+    // An empty CUSTOM list is a choice, not a loading state — say so, or it reads
+    // as though the row is broken.
     row.innerHTML = picks.length
       ? picks.map(popCard).join('')
-      : '<div style="font-size:12.6px;color:var(--muted)">loading games&#8230;</div>';
+      : (popPicks()
+          ? '<div style="font-size:12.6px;color:var(--muted)">No games pinned &#8212; hit <b>Edit games</b> to add some.</div>'
+          : '<div style="font-size:12.6px;color:var(--muted)">loading games&#8230;</div>');
   }
 
   const rec = document.getElementById('home-recent');
@@ -2248,11 +2782,11 @@ function doHomeSearch() {
 
 function setSource(src) {
   // Legacy: set all or single
-  if(src==='all'){activeSrcs=new Set(['gn','ugs','seraph','luminsdk']);}
+  if(src==='all'){activeSrcs=new Set(['gn','ugs','seraph','luminsdk','noah','tglsc']);}
   else{activeSrcs=new Set([src]);}
   activeSrc=src;
   updateSrcFilterBtns();
-  ['all','gn','ugs','seraph','luminsdk'].forEach(s=>{
+  ['all','gn','ugs','seraph','luminsdk','noah','tglsc'].forEach(s=>{
     const p=document.getElementById('pill-'+s);
     if(p){p.classList.toggle('active',s===src);}
   });
@@ -2277,7 +2811,7 @@ function toggleSrc(src) {
 }
 
 function updateSrcFilterBtns(){
-  ['gn','ugs','seraph','luminsdk'].forEach(s=>{
+  ['gn','ugs','seraph','luminsdk','noah','tglsc'].forEach(s=>{
     const b=document.getElementById('sfbtn-'+s);
     if(b) b.classList.toggle('on', activeSrcs.has(s));
   });
@@ -2318,16 +2852,21 @@ function _handOffKeyboard(frame){
 // here; anything arriving here means focus escaped back to the page (e.g. you
 // tapped Reload), which must not fire that button again on the next keypress.
 document.addEventListener('keydown', e => {
-  if (e.key !== ' ' && e.key !== 'Enter' && e.key !== 'Spacebar') return;
   const player = document.getElementById('player');
   if (!player || !player.classList.contains('open')) return;
   const a = document.activeElement;
-  if (!a || a === document.body) return;
-  const tag = a.tagName;
-  if (tag === 'IFRAME' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || a.isContentEditable) return;
+  const tag = a && a.tagName;
+  // Already typing into the game or a real field — leave it alone.
+  if (tag === 'IFRAME' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (a && a.isContentEditable)) return;
+  const f = document.getElementById('gframe');
+  // Focus parked on <body> means the game cannot receive ANYTHING. This used to
+  // return early, which is exactly why arrow/WASD games went dead after entering
+  // fullscreen (the fullscreen transition blurs the button onto <body>). Bounce
+  // focus back for any key, not just Space/Enter, so at most one keystroke is lost.
+  if (!a || a === document.body) { if (f && f.focus) f.focus({ preventScroll: true }); return; }
+  if (e.key !== ' ' && e.key !== 'Enter' && e.key !== 'Spacebar') return;
   e.preventDefault();
   if (a.blur) a.blur();
-  const f = document.getElementById('gframe');
   if (f && f.focus) f.focus({ preventScroll: true });
 }, true);
 
@@ -3291,6 +3830,43 @@ async function launch(key) {
     }
     return;
   }
+  // ── TGLSC: a hosted page on glseries.net reached only through the WISP tunnel.
+  // Fetch the shell, inline its static refs as data: URLs, and inject the shim
+  // that routes everything the game asks for at runtime back through us.
+  // NOTE: never inject a <base> here — a real base would make relative URLs load
+  // DIRECTLY from glseries.net, defeating the whole point of the tunnel.
+  if (g._src === 'tglsc') {
+    document.getElementById('newTabBtn').style.display='none';
+    try {
+      if (!_tgSession) { glog('info','connecting the TGLSC tunnel…'); await _tgConnect(); }
+      glog('info', 'loader: TGLSC (WISP tunnel via '+_tgWisp+')');
+      const base = g.url.replace(/[^/]*$/, '');
+      const r = await _tgPx(g.url);
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      let html = await r.text();
+      glog('ok', 'shell fetched through the tunnel ('+html.length+' bytes)');
+      html = await _tgInline(html, base, glog);
+      const inj = _gameLogShim(g.name) + _tgShimSrc(base) + _ytgameStub() + _unityFitShim() + __touchKeys() +
+        '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}' +
+        'ruffle-player,ruffle-embed,ruffle-object{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important}</style>';
+      html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + inj) : inj + html;
+      frame.onload = () => { frame.onload = null; glog('ok','iframe onload — game frame ready');
+                             _handOffKeyboard(frame);
+                             setTimeout(()=>document.getElementById('pload').classList.add('gone'), 300); };
+      frame.removeAttribute('src');
+      frame.srcdoc = html;
+      setTimeout(()=>document.getElementById('pload').classList.add('gone'), 9000);
+    } catch(e){
+      glog('error', 'TGLSC could not load this game: ' + (e && e.message ? e.message : e));
+      document.getElementById('ltxt').textContent =
+        'TGLSC is unreachable right now — the site or every proxy relay is down.';
+      document.getElementById('showAnywayBtn').style.display='none';
+      clearTimeout(window._showAnywayTimer);
+    }
+    return;
+  }
+
   const ntb=document.getElementById('newTabBtn');
   // New tab button: fetch HTML and write into new window with base tag
   ntb.style.display = '';
@@ -3895,7 +4471,25 @@ function fsGame(){
   const f=document.getElementById('gframe');
   const el=(touchOn() ? f.closest('.pframe') : f) || f;
   (el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||(()=>{})).call(el);
+  _handOffKeyboard(f);   // the click left focus on the button; take it back now
 }
+
+// MEASURED: entering fullscreen blurs whatever was clicked and parks focus on
+// <body> of THIS document — activeElement goes IFRAME#gframe → BODY — so every
+// keystroke lands in the parent and the game receives nothing. Games driven by
+// Space/Enter appeared to still work (the keydown guard bounced focus back);
+// anything on arrows/WASD went completely dead, which is why it looked like
+// "only some games". The transition is async, so re-assert focus when the
+// fullscreen state actually changes, not just when the button is pressed.
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange'].forEach(evt =>
+  document.addEventListener(evt, () => {
+    const p = document.getElementById('player');
+    if (!p || !p.classList.contains('open')) return;
+    const f = document.getElementById('gframe');
+    if (!f) return;
+    _handOffKeyboard(f);
+    setTimeout(() => _handOffKeyboard(f), 60);   // after the transition settles
+  }));
 
 
 // ═══════════════════════════════════════════════════════════
@@ -4164,6 +4758,7 @@ async function saveData() {
         wallpaper: localStorage.getItem('n3_wallpaper') || null,
         cloakTitle: localStorage.getItem('n3_cloak_title') || null,
         cloakIcon: localStorage.getItem('n3_cloak_icon') || null,
+        popular: localStorage.getItem(POP_KEY) || null,   // hand-picked home row
       }
     };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify([...playedGames])); } catch(e) {}
@@ -4230,6 +4825,7 @@ function loadData() {
           if (s.theme) { localStorage.setItem('n3_theme', s.theme); applyTheme(s.theme); }
           if (s.wallpaper) { localStorage.setItem('n3_wallpaper', s.wallpaper); setWallpaper(s.wallpaper); }
           if (s.cloakTitle) { localStorage.setItem('n3_cloak_title', s.cloakTitle); document.title = s.cloakTitle; }
+          if (s.popular) { try { localStorage.setItem(POP_KEY, s.popular); } catch(e){} }
           if (s.cloakIcon) {
             localStorage.setItem('n3_cloak_icon', s.cloakIcon);
             let link = document.querySelector("link[rel*='icon']");
@@ -4770,6 +5366,12 @@ function loadWallpaperPreview() {
   }
 })();
 </script>
+
+<!-- TGLSC transport: libcurl.js drives the WISP tunnel (script from jsDelivr).
+     Loaded lazily-ish at the end of the body so it never blocks first paint;
+     loadTglsc() waits for it via _tgWaitLc(). -->
+<script src="https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl_full.js"
+        onload="window._lcReady=1" onerror="window._lcErr=1"></script>
 
 <!-- LuminSDK — fourth game source (script itself served from jsDelivr) -->
 <script src="https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js"></script>
