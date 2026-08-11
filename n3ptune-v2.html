@@ -1420,11 +1420,9 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.2 (GD REFERENCE???)</span><span class="cl-date">Jul 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.2.5 (GD REFERENCE???)</span><span class="cl-date">Jul 2026</span></div>
       <ul>
-        <li>Added new CDN: Noah's Tutoring</li>
-        <li>Added new CDN: TGLSC (Doesn't work for now, will start working in october/september)</li>
-        <li>Added changing suggested games manually</li>
+        <li>Changed UGS CDN to a different one with way more games</li>
       </ul>
     </div>
   </div>
@@ -1711,8 +1709,11 @@ const _IC_GAMEPAD = '<svg width="24" height="24" viewBox="0 0 24 24" fill="curre
 const _IC_PLAY    = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>';
 
 
-// ── UGS / GITLAB (Hydra-Network) ──────────────────────────
-// UGS games now live on GitLab at Hydra.Network/game-assets/hydra-assets.
+// ── GITLAB LOADER (currently unused) ──────────────────────
+// UGS used to live here (Hydra.Network/game-assets/hydra-assets, 461 games) and
+// moved to jsDelivr on 2026-08-11 — see loadUGS(). NOTHING sets _gldir anymore,
+// so glList() and loadGitlabGame() are dead code kept for the next GitLab-hosted
+// source. Delete the whole block if none arrives.
 // GitLab's plain /-/raw/ endpoint has NO CORS header and serves every file as
 // text/plain;nosniff (so relative <script>/<link> get blocked and heavy games
 // can't XHR their data). The API v4 "files/.../raw" endpoint DOES send
@@ -1788,13 +1789,12 @@ async function glList(path){
 async function loadAll() {
   const rerender = () => { buildSidebar(); render(); renderHome(); };
   rerender(); // paint the shell immediately
-  // UGS lives on GitLab (CDN-independent) so start enumerating it right away.
-  const ugsP = loadUGS().then(rerender).catch(() => {});
-  // Seraph + GN-Math build CDN URLs, so wait for the fastest mirror first.
+  // UGS moved off GitLab onto jsDelivr, so it builds CDN URLs like Seraph and
+  // GN-Math do — every one of them has to wait for the fastest mirror first.
   await resolveCdn().catch(() => {});
   GN_COVER = `https://${_cdnHost}/gh/freebuisness/covers@main`;
   GN_HTML  = `https://${_cdnHost}/gh/freebuisness/html@main`;
-  await Promise.allSettled([ ugsP, loadSeraph().then(rerender), loadGN().then(rerender), loadNoah().then(rerender).catch(()=>{}), loadLuminSdk().then(rerender).catch(()=>{}), loadTglsc().then(rerender).catch(()=>{}) ]);
+  await Promise.allSettled([ loadUGS().then(rerender).catch(()=>{}), loadSeraph().then(rerender), loadGN().then(rerender), loadNoah().then(rerender).catch(()=>{}), loadLuminSdk().then(rerender).catch(()=>{}), loadTglsc().then(rerender).catch(()=>{}) ]);
   rerender();
 }
 
@@ -1853,29 +1853,54 @@ function _startPopFetch() {
 // SERAPH_GAMES is now enumerated at runtime by parsing a456pur/seraph's own
 // games/index.html via the jsDelivr CDN — see loadSeraph().
 
-// UGS_GAMES is now enumerated at runtime from the GitLab gmes/ folders — see loadUGS().
+// UGS_GAMES is enumerated at runtime from the repo's own games/games.json index.
+
+// ── UGS (groffstock/ugs-assets on jsDelivr) ───────────────
+// ~2.7k SELF-CONTAINED single-file games: games/<title>.html plus a matching
+// thumbnails/<title>.jpg. Being plain jsDelivr files, they ride the ordinary
+// srcdoc path in launch() — no _gldir, no proxy loader.
+//   • The repo is over jsDelivr's 50 MB package limit, so the metadata API
+//     (data.jsdelivr.com/v1/packages/…) and directory listings BOTH 403. Only
+//     individual file fetches work. Don't try to enumerate by listing — the
+//     repo's own games/games.json is the index and needs no listing at all.
+//   • games/** was in Git LFS until 2026-08-11; jsDelivr does not resolve LFS
+//     and served 132-byte pointer files instead of games. If every game ever
+//     opens to a frame containing "version https://git-lfs.github.com/spec/v1",
+//     the repo has been re-pushed with LFS, not the loader broken.
+//   • Filenames carry spaces and punctuation (& + ' ( ) [ ] , ; ! $ ~ % é), so
+//     EVERY path segment must be encodeURIComponent'd. One title genuinely
+//     contains '%' ("Obby 99% Will Lose"), so encoding to %25 is correct.
+//   • ~23% call window.parent.maeExportApis_() on their first line — already
+//     stubbed on the parent window (search maeExportApis_), which srcdoc frames
+//     reach because they're same-origin.
+const UGS_REPO = 'gh/groffstock/ugs-assets@main';
+const _ugsEnc  = p => String(p).split('/').map(encodeURIComponent).join('/');
+const UGS_URL  = p => `https://${_cdnHost}/${UGS_REPO}/${_ugsEnc(p)}`;
 
 async function loadUGS() {
-  // Enumerate the GitLab repo's gmes/ folders directly — each folder is one game
-  // holding all its files. _gldir marks it GitLab-proxied so launch() routes it
-  // through loadGitlabGame(), which loads/runs every file in the folder. Thumbs
-  // are flat files (thumbs/<key>.avif); broken ones are hidden by <img> onerror.
-  const keys = await cachedList('ugs_games', async () => {
-    const items = await glList('gmes');
-    return items.filter(x => x.type === 'tree').map(x => x.name);
+  // Cache only the four fields we use: the raw index is 1.4 MB and would eat
+  // most of the localStorage budget. Paths are stored RELATIVE so a later CDN
+  // switch (setCdnManual) rebuilds every URL onto the new mirror from cache.
+  const list = await cachedList('ugs_games_v3', async () => {
+    const r = await _origFetch(`https://${_cdnHost}/${UGS_REPO}/games/games.json`, { signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error('ugs games.json ' + r.status);
+    const d = JSON.parse(await r.text());
+    if (!Array.isArray(d)) throw new Error('ugs: not an array');
+    return d.filter(e => e && e.available !== false && typeof e.file === 'string' &&
+                         typeof e.title === 'string' && typeof e.slug === 'string')
+            .map(e => ({ s: e.slug, t: e.title, f: e.file, i: e.thumbnail || '' }));
   });
-  ugsGames = keys.map(k => {
-    const dir = 'gmes/' + k;
-    return {
-      _src:'ugs', _key:'ugs_'+k, _id:'ugs_'+k,
-      name: titleize(k),
-      cover: GL_RAW('thumbs/' + k + '.avif'),
-      url:   GL_RAW(dir + '/index.html'),
-      _gldir: dir,
-      tags:[], featured:false,
-    };
-  });
+  ugsGames = list.map(e => ({
+    _src:'ugs', _key:'ugs_'+e.s, _id:'ugs_'+e.s,
+    name: e.t,
+    // Keep the thumbnail path the index gives us — never derive it from the
+    // slug: they differ ("clnightfire" vs "007 Nightfire.jpg").
+    cover: e.i ? UGS_URL(e.i) : '',
+    url:   UGS_URL(e.f),
+    tags:[], featured:false,
+  }));
   ugsGames.sort((a,b)=>a.name.localeCompare(b.name));
+  console.log('[N3ptune] UGS loaded (' + ugsGames.length + ' games)');
 }
 
 // ═══════════════════════════════════════════════════════════
