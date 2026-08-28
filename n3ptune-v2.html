@@ -3749,10 +3749,26 @@ function _repairLibRefs(html, log){
 const BLOCKED_ACCOUNTS = ['gn-math', 'genizy'];
 const _BLOCKED_RE = new RegExp('/gh/(' + BLOCKED_ACCOUNTS.join('|') + ')[/@]', 'i');
 const BLOCKED_KEY = 'n3ptune_blocked';
+const BLOCKED_VER_KEY = 'n3ptune_blocked_ver';
+// Bump this whenever an upstream source is repaired or un-blocked, to drop every
+// stale UNAVAILABLE flag exactly once. A flag is otherwise PERMANENT: launch()
+// early-returns on a known-blocked key and never re-fetches, so a game flagged
+// while broken would stay gray forever after upstream fixed it.
+//   v2 (2026-08-28): gn-math repaired its freebuisness mirror - of 52 sampled GN
+//   games, 0 still reference /gh/gn-math or /gh/genizy.
+const BLOCKED_VER = 2;
 const blockedGames = new Map(); // key → account name
 
 function loadBlockedFromStorage(){
   try {
+    // One-time purge on a version bump: clear the flags and let each game prove
+    // itself again on its next launch.
+    if (+(localStorage.getItem(BLOCKED_VER_KEY) || 0) !== BLOCKED_VER) {
+      blockedGames.clear();
+      localStorage.removeItem(BLOCKED_KEY);
+      localStorage.setItem(BLOCKED_VER_KEY, String(BLOCKED_VER));
+      return;
+    }
     const raw = localStorage.getItem(BLOCKED_KEY);
     if (raw) for (const [k, a] of Object.entries(JSON.parse(raw))) blockedGames.set(k, a);
   } catch(e) {}
