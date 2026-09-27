@@ -1420,7 +1420,7 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.2.6 (GD REFERENCE???)</span><span class="cl-date">Jul 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.2.7 (GD REFERENCE???)</span><span class="cl-date">Jul 2026</span></div>
       <ul>
         <li>Changed UGS CDN to a different one with way more games</li>
         <li>Fixed LuminSDK not working on devices with JsDelivr blocked</li>
@@ -1526,6 +1526,10 @@ const CDN_TEST_PATH = '/gh/freebuisness/assets@main/zones.json';
 const ALL_CDN_HOSTS = /(\/\/)([a-z]+\.jsdelivr\.net)/g;
 
 let _cdnHost = CDN_MIRRORS[0];
+// Did ANY jsDelivr mirror answer? Some networks block only cdn.jsdelivr.net (or
+// all of *.jsdelivr.net) — _luminScript() reads this to decide whether to try a
+// jsDelivr copy of the SDK at all, or skip straight to a.luminsdk.com.
+let _cdnOk = true;
 let _cdnResolved = false;
 let _cdnResolving = null;
 
@@ -1599,6 +1603,7 @@ async function resolveCdn() {
     const saved = localStorage.getItem('n3_cdn');
     if (saved && CDN_MIRRORS.includes(saved)) {
       _cdnHost = saved;
+      _cdnOk = true;
       _cdnResolved = true;
       console.log('[N3ptune] CDN (manual):', cdnLabel(saved));
       return _cdnHost;
@@ -1626,6 +1631,7 @@ async function resolveCdn() {
       }
     }));
     const working = results.filter(r => r.ok).sort((a, b) => a.ms - b.ms);
+    _cdnOk = working.length > 0;
     if (working.length) {
       _cdnHost = working[0].mirror;
       // Cache the zones.json text from the fastest mirror so loadGN() doesn't re-fetch
@@ -1645,6 +1651,7 @@ function setCdnManual(mirror) {
   if (!mirror) return;
   localStorage.setItem('n3_cdn', mirror);
   _cdnHost = mirror;
+  _cdnOk = true;
   _cdnResolved = true;
   _cdnResolving = null;
   // Reload GN and UGS with new CDN
@@ -1916,14 +1923,75 @@ async function loadUGS() {
 //      frame.src (NOT srcdoc) and none of our in-frame shims can reach it.
 // ═══════════════════════════════════════════════════════════
 const LUMIN_ICON = 'https://a.luminsdk.com/api/v1/icon/';
+// The SDK's own copy of its script. This used to be a plain static
+// <script src="https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js">
+// at the end of the body — which meant that on a network blocking cdn.jsdelivr.net
+// (or all of *.jsdelivr.net) the tag silently never ran: no Lumin global,
+// _luminInit() burned its 10 s poll, and the source showed 0 games with nothing in
+// the log. _luminScript() injects it instead: the resolved (working) jsDelivr
+// mirror first, then a.luminsdk.com. That fallback is NOT a new host — the
+// catalogue, every cover icon and every game already come from a.luminsdk.com, so
+// if it is blocked the source cannot work at all. Verified byte-identical to the
+// jsDelivr copy (md5 713092b8…, 184 515 B).
+const LUMIN_SDK_JSDELIVR = 'https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js';
+const LUMIN_SDK_DIRECT   = 'https://a.luminsdk.com/lumin.min.js';
 let _luminReady = null;
+let _luminScriptP = null;
+
+// Inject a <script> that actually reports failure. onerror covers a refused/reset
+// request, but a black-holed host just hangs, so every attempt also has a deadline.
+function _loadScriptOnce(src, ms){
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    let done = false;
+    const fail = (why) => { if (done) return; done = true; clearTimeout(timer); s.remove(); reject(new Error(why)); };
+    const timer = setTimeout(() => fail('timed out after ' + ms + 'ms'), ms);
+    s.onload  = () => { if (done) return; done = true; clearTimeout(timer);
+                        if (typeof Lumin === 'undefined') return reject(new Error('loaded but defined no Lumin global'));
+                        resolve(src); };
+    s.onerror = () => fail('blocked or unreachable');
+    s.src = src;
+    document.head.appendChild(s);
+  });
+}
+
+// Fetch the SDK script ourselves. resolveCdn() has already ranked the mirrors, so
+// if cdn.jsdelivr.net is the blocked one, cdnUrl() rewrites this to the fastest
+// mirror that DID answer (fastly/gcore/…). a.luminsdk.com is always the final
+// fallback, so a total *.jsdelivr.net block still resolves.
+function _luminScript(){
+  if (_luminScriptP) return _luminScriptP;
+  _luminScriptP = (async () => {
+    if (typeof Lumin !== 'undefined') return 'already present';
+    await resolveCdn().catch(()=>{});
+    const urls = [];
+    if (_cdnOk) urls.push(cdnUrl(LUMIN_SDK_JSDELIVR));   // the working mirror, whichever it is
+    else console.warn('[N3ptune] LuminSDK: no jsDelivr mirror reachable, loading the SDK from a.luminsdk.com');
+    urls.push(LUMIN_SDK_DIRECT);                          // always the last resort
+    let last = null;
+    for (const u of urls){
+      const host = u.split('/')[2];
+      try {
+        await _loadScriptOnce(u, 12000);
+        console.log('[N3ptune] LuminSDK script loaded from ' + host);
+        return u;
+      } catch(e){
+        last = e;
+        console.warn('[N3ptune] LuminSDK script failed from ' + host + ': ' + e.message);
+      }
+    }
+    throw new Error('LuminSDK script could not be loaded (' + (last && last.message) + ')');
+  })();
+  return _luminScriptP;
+}
 
 // The SDK needs init() before its data API answers. It wants a container to draw
 // its own grid into; we render games in N3ptune's grid instead, so it gets a
-// detached node it can do what it likes with.
+// detached node it can do what it likes with. We wait for _luminScript() first,
+// so init never races a script tag that (on a blocked network) never ran.
 function _luminInit(){
   if (_luminReady) return _luminReady;
-  _luminReady = new Promise((resolve, reject) => {
+  _luminReady = _luminScript().then(() => new Promise((resolve, reject) => {
     let waited = 0;
     (function wait(){
       if (typeof Lumin === 'undefined' || !Lumin.init){
@@ -1942,7 +2010,7 @@ function _luminInit(){
       } catch(e){ return reject(e); }
       setTimeout(() => { if(!settled){ settled = true; resolve(); } }, 12000); // no onReady? try anyway
     })();
-  });
+  }));
   return _luminReady;
 }
 
@@ -3396,7 +3464,7 @@ async function loadGitlabGame(g, frame) {
     // GitLab hooks wrap it: a runtime asset resolves GitLab first, else falls
     // through to the jsDelivr reroute.
     const shim = _cdnfixShim() + _glIframeShim(extBase, dir);
-    const headInject = _gameLogShim(g.name) + '<base href="' + rawBase + '">' + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() + __touchKeys() +
+    const headInject = _gameLogShim(g.name) + '<base href="' + rawBase + '">' + _srcdocUrlFix() + _ytgameStub() + _kongregateStub() + _unityFitShim() + __touchKeys() +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}' +
       'ruffle-player,ruffle-embed,ruffle-object{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important}</style>' +
@@ -3636,6 +3704,46 @@ function _ytgameStub(){
       try{ Object.defineProperty(window, 'ytgame', { value: stub, writable:false, configurable:true }); }
       catch(e){ window.ytgame = stub; }
       try{ window.YTGame = stub; }catch(e){}
+    }catch(e){}
+  }
+  return '<script>('+shim.toString()+')()<\/script>';
+}
+
+// Kongregate games (e.g. Burrito Bison: Launcha Libre) load `kongregate_api.js`,
+// which assigns the bare global `kongregate` ONLY inside KongregateAPI.loadAPI()'s
+// callback — and that callback never fires in a sandboxed iframe, because it waits
+// to hand-shake with Kongregate's parent/holodeck frame that isn't there. So the
+// moment the game touches the API (submitting a stat when you unlock a luchador,
+// etc.) it throws "kongregate is not defined". We predefine `kongregate` as an
+// offline stub so every call is a harmless no-op and the game plays on as a guest.
+// A recursive Proxy answers ANY namespace/method (services/stats/mtx/scores/chat/…)
+// without us enumerating them; a small map returns real primitives for the getters
+// whose return type the game actually uses (id/name/token/guest flag). Callbacks
+// are deliberately NOT auto-fired — faking a login or a purchase result is riskier
+// than leaving the guest path alone; the crash is a synchronous reference, so a
+// defined no-op is all it takes.
+function _kongregateStub(){
+  function shim(){
+    try{
+      if(window.__n3kong) return; window.__n3kong = true;
+      var noop = function(){};
+      var KNOWN = { getUserId:0, getUserID:0, getUsername:'Guest',
+                    getGameAuthToken:'', isGuest:true, hasKongPlus:false,
+                    getVersion:'1.0-n3ptune', getGameId:0 };
+      var handler = {
+        get: function(t, p){
+          if(p==='then') return undefined;                 // don't look thenable
+          if(p==='toString') return function(){ return '[kongregate stub]'; };
+          if(typeof p==='string' && Object.prototype.hasOwnProperty.call(KNOWN, p))
+            return function(){ return KNOWN[p]; };
+          if(p in t) return t[p];
+          return new Proxy(noop, handler);                 // any namespace/method → recurse
+        },
+        apply: function(){ return undefined; }             // every call is a no-op
+      };
+      var stub = new Proxy(noop, handler);
+      try{ Object.defineProperty(window, 'kongregate', { value: stub, writable:true, configurable:true }); }
+      catch(e){ window.kongregate = stub; }
     }catch(e){}
   }
   return '<script>('+shim.toString()+')()<\/script>';
@@ -3888,7 +3996,7 @@ async function launch(key) {
       let html = await r.text();
       glog('ok', 'shell fetched through the tunnel ('+html.length+' bytes)');
       html = await _tgInline(html, base, glog);
-      const inj = _gameLogShim(g.name) + _tgShimSrc(base) + _ytgameStub() + _unityFitShim() + __touchKeys() +
+      const inj = _gameLogShim(g.name) + _tgShimSrc(base) + _ytgameStub() + _kongregateStub() + _unityFitShim() + __touchKeys() +
         '<meta name="viewport" content="width=device-width,initial-scale=1">' +
         '<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}' +
         'ruffle-player,ruffle-embed,ruffle-object{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important}</style>';
@@ -4019,7 +4127,7 @@ async function launch(key) {
     if (_blkAcct) { _showBlockedNotice(key, _blkAcct); return; }
     const hasOwnBase = /<base\b[^>]*\bhref\s*=/i.test(injected);
     glog('info', hasOwnBase ? 'using the game\'s OWN <base> (not injecting ours)' : ('injected <base> '+baseUrl));
-    const headInject = _gameLogShim(g.name) + _srcdocUrlFix() + _ytgameStub() + _unityFitShim() + _dataGuardShim() + __touchKeys() +
+    const headInject = _gameLogShim(g.name) + _srcdocUrlFix() + _ytgameStub() + _kongregateStub() + _unityFitShim() + _dataGuardShim() + __touchKeys() +
       (hasOwnBase ? '' : `<base href="${baseUrl}">`) +
       `<meta name="viewport" content="width=device-width,initial-scale=1">` +
       `<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}` +
@@ -4932,19 +5040,24 @@ document.getElementById('homeSearch').addEventListener('keydown', e=>{
 });
 
 // ── GAMES PAGE SEARCH ──
-document.addEventListener('DOMContentLoaded', ()=>{
+// Wire directly, NOT inside a DOMContentLoaded handler. When N3ptune is loaded
+// with document.write() into another page (the cloak/reflected-search launcher),
+// DOMContentLoaded has ALREADY fired, so a listener added there never runs — the
+// games-page search box goes dead while everything else works. This script sits
+// after #gamesSearch in the body, so the element is already present; the fallback
+// is only for a load order where it somehow isn't there yet.
+(function wireGamesSearch(){
   const gs = document.getElementById('gamesSearch');
-  if(gs){
-    gs.addEventListener('input', e=>{
-      activeSearch = e.target.value.trim();
-      activeView = 'all';
-      render();
-    });
-    gs.addEventListener('keydown', e=>{
-      if(e.key==='Escape'){ gs.value=''; activeSearch=''; render(); }
-    });
-  }
-});
+  if(!gs){ document.addEventListener('DOMContentLoaded', wireGamesSearch, {once:true}); return; }
+  gs.addEventListener('input', e=>{
+    activeSearch = e.target.value.trim();
+    activeView = 'all';
+    render();
+  });
+  gs.addEventListener('keydown', e=>{
+    if(e.key==='Escape'){ gs.value=''; activeSearch=''; render(); }
+  });
+})();
 
 
 loadAll().then(() => { loadPlayedFromStorage(); initHeroCanvas(); loadTheme(); loadWallpaper(); loadCloak(); });
@@ -5415,7 +5528,9 @@ function loadWallpaperPreview() {
 <script src="https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl_full.js"
         onload="window._lcReady=1" onerror="window._lcErr=1"></script>
 
-<!-- LuminSDK — fourth game source (script itself served from jsDelivr) -->
-<script src="https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js"></script>
+<!-- LuminSDK — fourth game source. NO static <script> tag here on purpose: a
+     hardcoded cdn.jsdelivr.net tag left the source dead on networks that block
+     jsDelivr. _luminScript() injects it instead, on the resolved (working) mirror,
+     with a.luminsdk.com (the SDK's own host, identical file) as the fallback. -->
 </body>
 </html>
