@@ -982,20 +982,32 @@ body{font-weight:600}
   })();
 
   async function fetchGitHubKeys() {
-    try {
-      const mirrors = ['cdn.jsdelivr.net','fastly.jsdelivr.net','gcore.jsdelivr.net','quantil.jsdelivr.net','testingcf.jsdelivr.net','originfastly.jsdelivr.net','cdn.staticdelivr.com'];
-      for (const m of mirrors) {
-        try {
-          // staticdelivr uses /branch/ instead of @branch
-          const kPath = m === 'cdn.staticdelivr.com'
-            ? `https://${m}/gh/${REPO}/main/keys.json`
-            : `https://${m}/gh/${REPO}@main/keys.json`;
-          const r = await _keyFetch(kPath + '?t=' + Date.now(), { signal: AbortSignal.timeout(5000) });
-          if (r.ok) return await r.json();
-        } catch(e) {}
-      }
-      return null; // all mirrors failed, don't log out
-    } catch(e) { return null; }
+    const mirrors = ['cdn.jsdelivr.net','fastly.jsdelivr.net','gcore.jsdelivr.net','quantil.jsdelivr.net','testingcf.jsdelivr.net','originfastly.jsdelivr.net','cdn.staticdelivr.com'];
+    // Fetch EVERY mirror in parallel and UNION the key lists. jsDelivr's @main
+    // edges go stale independently — at any moment one mirror can still serve the
+    // old keys.json while another already has the new one, and the ?t= cache-buster
+    // is ignored by jsDelivr. The old code returned the FIRST mirror that answered,
+    // so when cdn.jsdelivr.net is blocked and the next reachable mirror happens to
+    // be a stale edge, a freshly-rotated key was rejected ("invalid no matter what").
+    // Unioning means a key valid on ANY reachable mirror unlocks, and rotated-out
+    // keys keep working until every edge expires. Returns null ONLY if every mirror
+    // is unreachable (so callers can tell "can't verify" from "wrong key").
+    const results = await Promise.all(mirrors.map(async m => {
+      try {
+        // staticdelivr uses /branch/ instead of @branch
+        const kPath = m === 'cdn.staticdelivr.com'
+          ? `https://${m}/gh/${REPO}/main/keys.json`
+          : `https://${m}/gh/${REPO}@main/keys.json`;
+        const r = await _keyFetch(kPath + '?t=' + Date.now(), { signal: AbortSignal.timeout(6000) });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch(e) { return null; }
+    }));
+    const ok = results.filter(Boolean);
+    if (!ok.length) return null;                 // every mirror unreachable
+    const set = new Set();
+    ok.forEach(j => { (Array.isArray(j) ? j : Object.keys(j)).forEach(k => set.add(String(k))); });
+    return [...set];
   }
 
   // ── Periodic key revalidation ──
@@ -1039,14 +1051,18 @@ body{font-weight:600}
 
     showMsg('Checking…', '#6b9ab8');
 
-    // Check hardcoded keys first, then GitHub
+    // Check hardcoded keys first, then GitHub (unioned across all reachable mirrors)
     let validKeys = new Set(Object.keys(HARDCODED).map(k => k.toUpperCase()));
-    try {
-      const ghKeys = await fetchGitHubKeys();
-      // Support both array ["KEY1","KEY2"] and object {"KEY1":...} formats
-      const ghList = Array.isArray(ghKeys) ? ghKeys : Object.keys(ghKeys);
-      ghList.forEach(k => validKeys.add(String(k).toUpperCase()));
-    } catch(e) {}
+    const ghKeys = await fetchGitHubKeys();
+    // null = every mirror was unreachable — DON'T call that an invalid key (the old
+    // code did `Object.keys(null)`, which threw, left validKeys empty and showed
+    // "Invalid key" on a network failure). Tell the user, and don't burn a rate-limit.
+    if (ghKeys === null) {
+      showMsg('⚠️ Couldn\'t reach the key server — check your connection and try again.', '#fcd34d');
+      return;
+    }
+    // Support both array ["KEY1","KEY2"] and object {"KEY1":...} formats
+    (Array.isArray(ghKeys) ? ghKeys : Object.keys(ghKeys)).forEach(k => validKeys.add(String(k).toUpperCase()));
 
     if(!validKeys.has(key)){
       showMsg('❌ Invalid key.', '#f87171');
