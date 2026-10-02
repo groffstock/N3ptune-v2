@@ -1041,6 +1041,30 @@ body{font-weight:600}
   // Also check immediately on load if already unlocked
   if(sessionStorage.getItem('n3_unlocked') === '1') recheckKey();
 
+  // Centered in-page popup (nicer than a native alert; dismiss with OK / Esc / Enter / backdrop)
+  function showCenterPopup(text){
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:rgba(3,8,18,0.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-family:Fredoka,system-ui,sans-serif';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#071120;border:1px solid rgba(96,165,250,0.22);border-radius:16px;padding:26px 28px 20px;max-width:440px;width:100%;max-height:74vh;overflow:auto;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.6)';
+    var msg = document.createElement('div');
+    msg.innerHTML = text;
+    msg.style.cssText = 'color:#e8f4ff;font-size:14.5px;font-weight:600;line-height:1.6;margin-bottom:20px;text-align:left';
+    var btn = document.createElement('button');
+    btn.textContent = 'OK';
+    btn.style.cssText = 'background:#2563eb;color:#fff;border:0;border-radius:9px;padding:9px 30px;font:600 14px Fredoka,system-ui,sans-serif;cursor:pointer;transition:background .12s';
+    btn.onmouseover = function(){ btn.style.background = '#1d4ed8'; };
+    btn.onmouseout  = function(){ btn.style.background = '#2563eb'; };
+    function close(){ ov.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(e){ if(e.key === 'Escape' || e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); close(); } }
+    btn.onclick = close;
+    ov.addEventListener('click', function(e){ if(e.target === ov) close(); });
+    document.addEventListener('keydown', onKey, true);
+    box.appendChild(msg); box.appendChild(btn); ov.appendChild(box);
+    document.body.appendChild(ov);
+    btn.focus();
+  }
+
   window.submitKey = async function() {
     if(rateLocked) return;
     const input = document.getElementById('keyInput');
@@ -1072,6 +1096,7 @@ body{font-weight:600}
 
     // ✅ Valid
     showMsg('✅ Access granted!', '#4ade80');
+    showCenterPopup(`Hey everyone! My name is Isaiah, I go to Atlanta Public Schools, and I'm officially the new owner of N3ptune. The old owner trusted me with this, so I will try as hard as possible to keep this website amazing. If you have questions/comments/concerns/want a new link, email me at <a href="mailto:yoyoygroff@gmail.com" style="color:#60a5fa;text-decoration:underline">yoyoygroff@gmail.com</a>.<br><br>PS: If you want an unblockable link, go to <a href="https://p.kll.li/?a0a6db0332483255#2hGYX38jqjqQwijSq5uxS1g7Tt6C9MdZc5G3NLXqNfhj" target="_blank" rel="noreferrer" style="color:#60a5fa;text-decoration:underline;word-break:break-all">https://p.kll.li/?a0a6db0332483255#2hGYX38jqjqQwijSq5uxS1g7Tt6C9MdZc5G3NLXqNfhj</a> for the tutorial`);
     sessionStorage.setItem('n3_unlocked', '1');
     sessionStorage.setItem('n3_key', key);
     setTimeout(()=>{
@@ -2694,6 +2719,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // the GN-Math source only, excluding any known-blocked game. The trailing
 // entries are just fallbacks if a curated pick is missing/blocked.
 const POPULAR_PICKS = [/slope/i,/drift hunters/i,/moto x3m/i,/ragdoll hit/i,/ragdoll archers/i,/highway racer 2/i,/snow rider/i,/escape road/i,/paper\.?io 2/i,/\bvex\b/i,/geometry dash/i,/subway/i,/stickman/i,/among us/i,/bitlife/i,/granny/i,/friday night|fnf/i,/eaglercraft|minecraft/i,/\b2048\b/i];
+// Specific games pinned to the FRONT of the default "Popular now", by EXACT key
+// (any source — overrides the GN-Math-only default below). This is how to add a
+// non-GN favourite: Burrito Bison Launcha Libre must be the UGS build, so pin its
+// exact key rather than a title regex (which would match the GN-Math copy first).
+const POPULAR_PINS = ['ugs_clburritobisonlaunchalibre'];
 function popularGames(n){
   // A saved list wins over the curated default — including a deliberately empty
   // one (the user removed everything), which must NOT silently fall back.
@@ -2704,6 +2734,13 @@ function popularGames(n){
   }
   const pool = getAllGames().filter(g => g && g._src === 'gn' && g.cover && !blockedGames.has(g._key));
   const picks = [], used = new Set();
+  // Pinned exact-key games first (any source), e.g. the UGS Burrito Bison.
+  const _allForPins = getAllGames();
+  for (const key of POPULAR_PINS){
+    const g = _allForPins.find(x => x._key === key && !blockedGames.has(x._key));
+    if (g && !used.has(g._key)){ picks.push(g); used.add(g._key); }
+    if (picks.length >= n) break;
+  }
   for (const re of POPULAR_PICKS){
     const g = pool.find(x => re.test(x.name) && !used.has(x._key));
     if (g){ picks.push(g); used.add(g._key); }
