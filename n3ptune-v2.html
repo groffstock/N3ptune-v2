@@ -334,6 +334,14 @@ body{
 
 /* ── GAMES PAGE ── */
 .games-page{overflow:hidden}
+/* ═══ CLOUD GAMING (embedded CloudMoon portal, re-themed) ═══ */
+.cloud-page{overflow:hidden;padding:0}
+.cloud-wrap{position:absolute;inset:0;background:var(--bg)}
+#cloudFrame{position:absolute;inset:0;width:100%;height:100%;border:none;display:block;background:var(--bg)}
+.cloud-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted2);text-align:center;padding:24px}
+.cloud-state .spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin 1s linear infinite}
+.cloud-state .cloud-retry{margin-top:4px;background:var(--accent);color:#fff;border:none;padding:9px 18px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}
+.cloud-state .cloud-retry:hover{background:var(--accent2)}
 .games-topbar{flex-shrink:0}
 .games-content{padding:16px 22px 48px;flex:1;overflow-y:scroll;min-height:0;}
 
@@ -1192,6 +1200,10 @@ body{font-weight:600}
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6H3a1 1 0 00-1 1v10a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zm-11 8H8v2H6v-2H4v-2h2v-2h2v2h2v2zm4-1a1 1 0 110-2 1 1 0 010 2zm3 2a1 1 0 110-2 1 1 0 010 2z"/></svg>
     <span class="sb-item-tip">Games</span>
   </div>
+  <div class="sb-item" id="sb-cloud" onclick="showPage('cloud')">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+    <span class="sb-item-tip">Cloud Gaming</span>
+  </div>
   <div class="sb-item" id="sb-settings" onclick="showPage('settings')">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
     <span class="sb-item-tip">Settings</span>
@@ -1304,6 +1316,16 @@ body{font-weight:600}
     </div>
     <div class="games-content" id="games-content">
       <div class="loading-state"><div class="spinner"></div><p>Loading games...</p></div>
+    </div>
+  </div>
+
+  <!-- CLOUD GAMING PAGE (embedded CloudMoon portal, re-skinned to N3ptune) -->
+  <div class="page cloud-page" id="page-cloud">
+    <div class="cloud-wrap" id="cloud-wrap">
+      <div class="cloud-state" id="cloud-state">
+        <div class="spinner"></div>
+        <p>Starting cloud gaming…</p>
+      </div>
     </div>
   </div>
 
@@ -1461,10 +1483,9 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.2.7 (GD REFERENCE???)</span><span class="cl-date">Jul 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.3</span><span class="cl-date">Jul 2026</span></div>
       <ul>
-        <li>Changed UGS CDN to a different one with way more games</li>
-        <li>Fixed LuminSDK not working on devices with JsDelivr blocked</li>
+        <li>Added cloud gaming!</li>
       </ul>
     </div>
   </div>
@@ -5057,6 +5078,136 @@ function loadData() {
 }
 
 
+// ── CLOUD GAMING (CloudMoon, embedded + re-skinned to N3ptune) ──
+// CloudMoon is a cloud-STREAMING service: AAA games stream from web.cloudmoonapp.com
+// through its own portal + login. A live stream can't be a plain srcdoc game, so we embed
+// CloudMoon's self-contained portal in an iframe and re-theme it to N3ptune. Third-party
+// hosts (web.cloudmoonapp.com, cdn.tailwindcss.com, lucide) ride along — same accepted-
+// exception category as LuminSDK; the user asked for it. Pinned to a dated build: bump
+// CLOUDMOON_PORTAL when CloudMoon rotates the SVG/portal filename.
+const CLOUDMOON_PORTAL = 'portal-260909.html';
+const CLOUDMOON_BASE = 'https://cdn.jsdelivr.net/gh/CloudMoonApp/web@main/';
+let _cloudLoaded = false, _cloudLoading = false;
+
+function _cloudReskin(html){
+  const H = _cdnHost;                                  // resolved jsDelivr mirror
+  // Route EVERY jsDelivr request through the mirror — the portal's own <script>/<link>
+  // tags (lucide, …), the player's (Vue/socket.io/… in skin() below), not just the
+  // initial portal fetch. A fetch/XHR shim (JSD_SHIM) covers anything built at runtime.
+  html = html.replace(/https?:\/\/[a-z0-9.-]*\.jsdelivr\.net/gi, 'https://' + H);
+  const JSD_SHIM = 'var H=' + JSON.stringify(H) + ';'
+    + 'function fx(u){try{return String(u).replace(/https?:\\/\\/[a-z0-9.-]*\\.jsdelivr\\.net/gi,"https://"+H);}catch(e){return u;}}'
+    + 'var of=window.fetch;if(of)window.fetch=function(i,o){try{if(typeof i==="string")i=fx(i);else if(i&&i.url)i=new Request(fx(i.url),i);}catch(e){}return of.call(this,i,o);};'
+    + 'var xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{u=fx(u);}catch(e){}return xo.apply(this,[m,u].concat([].slice.call(arguments,2)));};';
+  html = html.replace('<head>', '<head><script>(function(){' + JSD_SHIM + '})();<\/script>');
+  // Brand → N3ptune
+  html = html.replace('<title>CloudMoon</title>', '<title>N3ptune Cloud</title>');
+  html = html.replace(/<img src="https:\/\/cloudmoonapp\.com\/favicon\.ico"[^>]*>/,
+    '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="#2563eb"><path d="M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>');
+  html = html.replace(/>Cloud<span class="text-\[#8b5cf6\]">Moon<\/span>/,
+    '>N3<span class="text-[#2563eb]">ptune</span>');
+  // Colours → N3ptune palette (covers the <style> block AND the inline styles its JS builds)
+  html = html.split('#8b5cf6').join('#2563eb');
+  html = html.split('139, 92, 246').join('37, 99, 235');
+  html = html.split('#1e2831').join('#050d1a');
+  html = html.split('#2d3748').join('#0a1828');
+  // Match N3ptune's Fredoka font + grid backdrop, AND override the purples that the
+  // portal's obfuscated JS injects at runtime (encoded in its string array, so they
+  // can't be reached by the raw string swaps above — only by CSS). Tailwind Play CDN
+  // emits these utilities WITHOUT !important, so !important here always wins.
+  const inject = '\n<link rel="preconnect" href="https://fonts.googleapis.com">'
+    + '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">'
+    + '<style>:root{--bg-main:#050d1a!important;--primary:#2563eb!important}'
+    + 'html,body,.portal-body,.login-input,button,input,select{font-family:\'Fredoka\',sans-serif!important}'
+    + 'body,.portal-body{background:#050d1a!important;'
+    + 'background-image:linear-gradient(rgba(37,99,235,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.04) 1px,transparent 1px)!important;'
+    + 'background-size:44px 44px!important}'
+    // Purple → N3ptune blue, for the runtime-injected DOM (Sign-In buttons, cards, badges)
+    + '[class*="bg-[#8b5cf6]"]{background-color:#2563eb!important}'
+    + '[class*="bg-[#7c3aed]"]:hover{background-color:#1d4ed8!important}'
+    + '[class*="text-[#8b5cf6]"]{color:#60a5fa!important}'
+    + '[class*="border-[#8b5cf6]"]{border-color:#2563eb!important}'
+    + '[class*="bg-[#1e2831]"]{background-color:#050d1a!important}'
+    + '[class*="shadow-purple"]{--tw-shadow-color:rgba(37,99,235,.3)!important}'
+    + '[class*="bg-purple-"],[class*="bg-violet-"]{background-color:#2563eb!important}'
+    + '[class*="text-purple-"],[class*="text-violet-"]{color:#60a5fa!important}'
+    + '[class*="border-purple-"],[class*="border-violet-"]{border-color:#2563eb!important}'
+    + '[class*="ring-purple-"],[class*="ring-violet-"]{--tw-ring-color:#2563eb!important}'
+    // Slate surfaces → N3ptune panel tone
+    + '[class*="bg-gray-800"]{background-color:rgba(10,24,40,.72)!important}'
+    + '.category-btn.active{background-color:#2563eb!important}'
+    + '.login-input:focus{border-color:#2563eb!important}</style>\n';
+  html = html.replace('</head>', inject + '</head>');
+
+  // Make "Play" actually launch. CloudMoon's launchGameAction(sid) writes
+  // cm_launch_data to localStorage then does location.assign('./play-260909.svg')
+  // — a RELATIVE same-origin navigation. In our srcdoc embed the base is
+  // about:srcdoc, so that path resolves to nothing → "It may have been moved,
+  // edited, or deleted." The player reads its session from localStorage, so it
+  // must run in OUR origin. We wrap App.launchGameAction (App is a global, used
+  // by the portal's own onclick handlers) to keep the same localStorage write but
+  // load the player HTML straight into this same iframe via document.write (same
+  // origin → cm_launch_data is readable), exactly as play-260909.svg would, minus
+  // the origin change. The player's assets are absolute jsDelivr; only two images
+  // are relative, so we give the player doc a <base> on the CDN.
+  const playerUrl = cdnUrl(CLOUDMOON_BASE + CLOUDMOON_PORTAL.replace('portal-', 'play-')) + '?t=' + Date.now();
+  const playerBase = cdnUrl(CLOUDMOON_BASE);
+  const playFix = '\n<script>(function(){'
+    + 'var PU=' + JSON.stringify(playerUrl) + ',PB=' + JSON.stringify(playerBase) + ',H=' + JSON.stringify(H) + ',SI=' + JSON.stringify(JSD_SHIM) + ';'
+    + 'function skin(h){'
+    +   'h=h.replace(/https?:\\/\\/[a-z0-9.-]*\\.jsdelivr\\.net/gi,"https://"+H);'
+    +   'h=h.replace("<title>CloudMoon - Play</title>","<title>N3ptune \\u2014 Play</title>");'
+    +   'h=h.split("#8b5cf6").join("#2563eb").split("#7c3aed").join("#1d4ed8").split("139, 92, 246").join("37, 99, 235");'
+    +   'var SH="<scr"+"ipt>(function(){"+SI+"})();</scr"+"ipt>";'
+    +   'return h.replace("<head>","<head>"+SH+\'<base href="\'+PB+\'">\');'
+    + '}'
+    + 'function play(){'
+    +   'fetch(PU,{cache:"no-store"}).then(function(r){return r.text();}).then(function(h){'
+    +     'document.open();document.write(skin(h));document.close();'
+    +   '}).catch(function(){document.documentElement.innerHTML="<body style=\\"margin:0;background:#050d1a;color:#e8f4ff;font:16px Fredoka,sans-serif;display:grid;place-items:center;height:100vh\\">Could not start the stream. Please try again.</body>";});'
+    + '}'
+    + 'function hook(){'
+    +   'if(window.App&&typeof window.App.launchGameAction==="function"){'
+    +     'window.App.launchGameAction=function(sid){try{localStorage.setItem("cm_launch_data",JSON.stringify({sid:sid,quality:"SD",timestamp:Date.now()}));}catch(e){}play();};'
+    +   '}else{setTimeout(hook,120);}'
+    + '}hook();'
+    + '})();<\/script>\n';
+  html = html.replace('</body>', playFix + '</body>');
+  return html;
+}
+
+async function loadCloud(){
+  if (_cloudLoaded || _cloudLoading) return;
+  _cloudLoading = true;
+  const wrap = document.getElementById('cloud-wrap');
+  const setState = (msg, retry) => {
+    wrap.innerHTML = '<div class="cloud-state">'
+      + (retry ? '' : '<div class="spinner"></div>')
+      + '<p>' + msg + '</p>'
+      + (retry ? '<button class="cloud-retry" onclick="loadCloud()">Retry</button>' : '')
+      + '</div>';
+  };
+  setState('Starting cloud gaming…', false);
+  try {
+    await resolveCdn();
+    const url = cdnUrl('https://cdn.jsdelivr.net/gh/CloudMoonApp/web@main/' + CLOUDMOON_PORTAL) + '?t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('portal HTTP ' + res.status);
+    let html = await res.text();
+    if (!/CloudMoon|portal-body/i.test(html)) throw new Error('unexpected portal content');
+    html = _cloudReskin(html);
+    wrap.innerHTML = '<iframe id="cloudFrame" allow="autoplay; fullscreen; gamepad; clipboard-write; encrypted-media; microphone; camera" allowfullscreen></iframe>';
+    document.getElementById('cloudFrame').srcdoc = html;
+    _cloudLoaded = true;
+    console.log('[N3ptune] Cloud gaming (CloudMoon) portal embedded from ' + _cdnHost);
+  } catch (e) {
+    console.warn('[N3ptune] Cloud gaming failed to load', e);
+    setState('Couldn’t reach cloud gaming. Check your connection and try again.', true);
+  } finally {
+    _cloudLoading = false;
+  }
+}
+
 // ── PAGE NAVIGATION ──
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -5074,6 +5225,9 @@ function showPage(name) {
   } else if(name==='games'){
     topbar.style.display='none'; // games page has its own built-in topbar
     render();
+  } else if(name==='cloud'){
+    topbar.style.display='none'; // embedded portal is full-bleed
+    loadCloud();
   } else {
     topbar.style.display='flex';
     if(pt) pt.textContent = 'Settings';
