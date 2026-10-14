@@ -5087,10 +5087,30 @@ function loadData() {
 // CLOUDMOON_PORTAL when CloudMoon rotates the SVG/portal filename.
 const CLOUDMOON_PORTAL = 'portal-260909.html';
 const CLOUDMOON_BASE = 'https://cdn.jsdelivr.net/gh/CloudMoonApp/web@main/';
-let _cloudLoaded = false, _cloudLoading = false;
+let _cloudLoaded = false, _cloudLoading = false, _cloudPortalHtml = null, _cloudWired = false;
 
-function _cloudReskin(html){
-  const H = _cdnHost;                                  // resolved jsDelivr mirror
+// Back out of a running stream to the catalog. The player document.write's itself into
+// the cloud iframe and then navigates cross-origin to the stream host, so the player's
+// own "return" can't bring us back — but the PARENT still owns the iframe, so re-setting
+// its srcdoc to the (cached, re-skinned) portal always works, error or not.
+function _cloudBack(){
+  const f = document.getElementById('cloudFrame');
+  if (f && _cloudPortalHtml) f.srcdoc = _cloudPortalHtml;
+  const b = document.getElementById('cloud-back'); if (b) b.style.display = 'none';
+}
+// The player posts {__n3cloud:"play"} from our origin just before it hands off, so we
+// reveal the Back button for the whole session.
+function _cloudWire(){
+  if (_cloudWired) return; _cloudWired = true;
+  window.addEventListener('message', function(e){
+    if (e && e.data && e.data.__n3cloud === 'play'){
+      const b = document.getElementById('cloud-back'); if (b) b.style.display = 'inline-flex';
+    }
+  });
+}
+
+function _cloudReskin(html, H){
+  H = H || _cdnHost;                                   // the jsDelivr mirror that actually served the portal
   // Route EVERY jsDelivr request through the mirror — the portal's own <script>/<link>
   // tags (lucide, …), the player's (Vue/socket.io/… in skin() below), not just the
   // initial portal fetch. A fetch/XHR shim (JSD_SHIM) covers anything built at runtime.
@@ -5099,7 +5119,37 @@ function _cloudReskin(html){
     + 'function fx(u){try{return String(u).replace(/https?:\\/\\/[a-z0-9.-]*\\.jsdelivr\\.net/gi,"https://"+H);}catch(e){return u;}}'
     + 'var of=window.fetch;if(of)window.fetch=function(i,o){try{if(typeof i==="string")i=fx(i);else if(i&&i.url)i=new Request(fx(i.url),i);}catch(e){}return of.call(this,i,o);};'
     + 'var xo=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{u=fx(u);}catch(e){}return xo.apply(this,[m,u].concat([].slice.call(arguments,2)));};';
-  html = html.replace('<head>', '<head><script>(function(){' + JSD_SHIM + '})();<\/script>');
+  // "Sign Up" helper: CloudMoon logs in with email+password only (no usable Google
+  // sign-in in an embed — see the Cloud Gaming notes). Shown only when logged out, it
+  // explains the account path that works: sign in with Google on CloudMoon's own site,
+  // set a password there, then log in here. Built entirely in a head script (NOT via a
+  // </body> inject — the portal's obfuscated JS contains a "</body>" string literal, so
+  // string-replacing </body> lands content inside that script, not the live DOM) and
+  // (re)attached by an observer so the portal's re-renders can't drop it.
+  const SIGNUP_HEAD = `<script>(function(){
+var MH="<div style='max-width:470px;width:100%;max-height:90vh;overflow:auto;background:#071120;border:1px solid rgba(96,165,250,.18);border-radius:18px;padding:26px 24px;color:#e8f4ff;box-shadow:0 24px 60px rgba(0,0,0,.55)'><div style='display:flex;align-items:center;gap:10px;margin-bottom:10px'><svg width='24' height='24' viewBox='0 0 24 24' fill='#2563eb'><path d='M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z'/></svg><h2 style='font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em'>Create an account</h2></div><p style='color:#6b9ab8;font-size:13.5px;line-height:1.55;margin:0 0 16px'>You log in here with an email and password. The quickest way to get set up is to sign in with Google on CloudMoon's own site once, add a password to your account, then come back and log in. It only takes a minute.</p><div style='background:#0a1828;border:1px solid rgba(96,165,250,.12);border-radius:12px;padding:12px 14px;margin-bottom:16px'><div style='font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#60a5fa;margin-bottom:8px'>What you need</div><ul style='margin:0;padding-left:18px;font-size:13.5px;line-height:1.7'><li>A personal device, not a school or work one</li><li>A personal Google account</li></ul></div><ol style='margin:0 0 22px;padding-left:20px;font-size:13.5px;line-height:1.8'><li>On a personal device, open <b style='color:#60a5fa'>web.cloudmoonapp.com</b>.</li><li>Click <b>Sign in</b>, then pick <b>Sign in with Google</b> and choose your account.</li><li>Once you are signed in, click your account in the top right.</li><li>Find <b>Password</b> and click the <b>Set up</b> button next to it.</li><li>Pick a password and save it.</li><li>Come back here and sign in with that email and password.</li></ol><button id='n3su-close' style='width:100%;height:44px;background:#2563eb;color:#fff;border:none;border-radius:12px;font:700 14px Fredoka,sans-serif;cursor:pointer'>Got it</button></div>";
+function buildModal(){var ov=document.getElementById("n3su-ov");if(ov)return ov;ov=document.createElement("div");ov.id="n3su-ov";ov.style.cssText="position:fixed;inset:0;z-index:2147483000;background:rgba(5,13,26,.82);display:none;align-items:center;justify-content:center;padding:20px;font-family:Fredoka,sans-serif";ov.innerHTML=MH;ov.addEventListener("click",function(e){if(e.target===ov)ov.style.display="none";});(document.body||document.documentElement).appendChild(ov);var c=ov.querySelector("#n3su-close");if(c)c.onclick=function(){ov.style.display="none";};return ov;}
+function openM(){buildModal().style.display="flex";}
+function ensure(){
+  if(!document.body)return;
+  var li=false;try{li=!!localStorage.getItem("cm_auth_token");}catch(e){}
+  var btn=document.getElementById("n3su-btn");
+  if(li){if(btn)btn.remove();var ov=document.getElementById("n3su-ov");if(ov)ov.style.display="none";return;}
+  if(!document.getElementById("n3su-ov"))buildModal();
+  var d=document.getElementById("user-area-desktop"),m=document.getElementById("user-area-mobile");
+  var area=(d&&d.offsetParent!==null)?d:((m&&m.offsetParent!==null)?m:(d||m||null));
+  if(btn){if(area&&btn.parentNode!==area)area.insertBefore(btn,area.firstChild);return;}
+  btn=document.createElement("button");btn.id="n3su-btn";btn.textContent="Sign Up";
+  btn.style.cssText="display:inline-flex;align-items:center;height:40px;padding:0 20px;margin-right:8px;background:transparent;border:1.5px solid #2563eb;color:#60a5fa;font:700 11px Fredoka,sans-serif;text-transform:uppercase;letter-spacing:.1em;border-radius:12px;cursor:pointer;white-space:nowrap";
+  btn.onmouseover=function(){btn.style.background="rgba(37,99,235,.12)";};btn.onmouseout=function(){btn.style.background="transparent";};
+  btn.onclick=openM;
+  if(area)area.insertBefore(btn,area.firstChild);
+  else{btn.style.position="fixed";btn.style.top="15px";btn.style.right="120px";btn.style.zIndex="2147482000";document.body.appendChild(btn);}
+}
+var booted=false;function boot(){if(booted)return;booted=true;ensure();try{new MutationObserver(ensure).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}setInterval(ensure,1500);}
+var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);if(document.body)boot();
+})();<\/script>`;
+  html = html.replace('<head>', '<head><script>(function(){' + JSD_SHIM + '})();<\/script>' + SIGNUP_HEAD);
   // Brand → N3ptune
   html = html.replace('<title>CloudMoon</title>', '<title>N3ptune Cloud</title>');
   html = html.replace(/<img src="https:\/\/cloudmoonapp\.com\/favicon\.ico"[^>]*>/,
@@ -5111,6 +5161,8 @@ function _cloudReskin(html){
   html = html.split('139, 92, 246').join('37, 99, 235');
   html = html.split('#1e2831').join('#050d1a');
   html = html.split('#2d3748').join('#0a1828');
+  // Fix CloudMoon's own search-placeholder typo.
+  html = html.split('Discovery your next game').join('Discover your next game');
   // Match N3ptune's Fredoka font + grid backdrop, AND override the purples that the
   // portal's obfuscated JS injects at runtime (encoded in its string array, so they
   // can't be reached by the raw string swaps above — only by CSS). Tailwind Play CDN
@@ -5158,10 +5210,14 @@ function _cloudReskin(html){
     +   'h=h.replace(/https?:\\/\\/[a-z0-9.-]*\\.jsdelivr\\.net/gi,"https://"+H);'
     +   'h=h.replace("<title>CloudMoon - Play</title>","<title>N3ptune \\u2014 Play</title>");'
     +   'h=h.split("#8b5cf6").join("#2563eb").split("#7c3aed").join("#1d4ed8").split("139, 92, 246").join("37, 99, 235");'
+    +   'var CM=[["7B6CC4","2563eb"],["5c6ac4","2563eb"],["6a78d1","2563eb"],["5a67a4","1d4ed8"],["47537a","1e3a8a"],["818cf8","60a5fa"],["8fa0ff","60a5fa"],["9fb0ff","93c5fd"],["40dbfa","60a5fa"],["232830","071120"],["3f4c57","0a1828"],["42505b","0a1828"],["4b5563","0a1828"],["3f4f5b","0a1828"],["495864","0a1828"],["5a6c78","0f2744"],["6d8391","0f2744"],["6b7d8b","0f2744"],["828b9e","6b9ab8"],["a1a1aa","6b9ab8"]];'
+    +   'for(var ci=0;ci<CM.length;ci++)h=h.replace(new RegExp("#"+CM[ci][0],"gi"),"#"+CM[ci][1]);'
+    +   'h=h.split("./run-site/images/favicon.png").join("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%2360a5fa%27%3E%3Cpath d=%27M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z%27/%3E%3C/svg%3E");'
     +   'var SH="<scr"+"ipt>(function(){"+SI+"})();</scr"+"ipt>";'
     +   'return h.replace("<head>","<head>"+SH+\'<base href="\'+PB+\'">\');'
     + '}'
     + 'function play(){'
+    +   'try{parent.postMessage({__n3cloud:"play"},"*");}catch(e){}'
     +   'fetch(PU,{cache:"no-store"}).then(function(r){return r.text();}).then(function(h){'
     +     'document.open();document.write(skin(h));document.close();'
     +   '}).catch(function(){document.documentElement.innerHTML="<body style=\\"margin:0;background:#050d1a;color:#e8f4ff;font:16px Fredoka,sans-serif;display:grid;place-items:center;height:100vh\\">Could not start the stream. Please try again.</body>";});'
@@ -5190,16 +5246,38 @@ async function loadCloud(){
   setState('Starting cloud gaming…', false);
   try {
     await resolveCdn();
-    const url = cdnUrl('https://cdn.jsdelivr.net/gh/CloudMoonApp/web@main/' + CLOUDMOON_PORTAL) + '?t=' + Date.now();
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('portal HTTP ' + res.status);
-    let html = await res.text();
-    if (!/CloudMoon|portal-body/i.test(html)) throw new Error('unexpected portal content');
-    html = _cloudReskin(html);
-    wrap.innerHTML = '<iframe id="cloudFrame" allow="autoplay; fullscreen; gamepad; clipboard-write; encrypted-media; microphone; camera" allowfullscreen></iframe>';
-    document.getElementById('cloudFrame').srcdoc = html;
+    // Don't trust a single mirror — the resolved one may be unreachable on this
+    // network (that's why cloud gaming "only worked on fastly"). Try each in turn.
+    const mirrors = [_cdnHost, ...CDN_MIRRORS_ALL.filter(m => m !== _cdnHost)];
+    let raw = null, usedHost = null, lastErr = null;
+    // Fetch from a throwaway iframe's NATIVE fetch. The main window's fetch is patched
+    // by the CDN-mirror code to rewrite every jsDelivr host back to _cdnHost, which
+    // would force every attempt onto the one (maybe unreachable) mirror and defeat the
+    // fallback — that's why cloud gaming "only worked on fastly" for some networks.
+    let _nfFrame = null, F = (typeof _origFetch === 'function') ? _origFetch : window.fetch;
+    try { _nfFrame = document.createElement('iframe'); _nfFrame.style.display = 'none'; document.body.appendChild(_nfFrame); F = _nfFrame.contentWindow.fetch.bind(_nfFrame.contentWindow); } catch(e){}
+    try {
+      for (const host of mirrors) {
+        try {
+          const url = 'https://' + host + '/gh/CloudMoonApp/web@main/' + CLOUDMOON_PORTAL + '?t=' + Date.now();
+          const res = await F(url, { cache: 'no-store' });
+          if (!res.ok) { lastErr = new Error('HTTP ' + res.status + ' @ ' + host); continue; }
+          const t = await res.text();
+          if (!/CloudMoon|portal-body/i.test(t)) { lastErr = new Error('bad content @ ' + host); continue; }
+          raw = t; usedHost = host; break;
+        } catch (err) { lastErr = err; }
+      }
+    } finally { if (_nfFrame) { try { _nfFrame.remove(); } catch(e){} } }
+    if (!raw) throw (lastErr || new Error('all mirrors failed'));
+    _cloudPortalHtml = _cloudReskin(raw, usedHost);
+    wrap.innerHTML = '<iframe id="cloudFrame" allow="autoplay; fullscreen; gamepad; clipboard-write; encrypted-media; microphone; camera" allowfullscreen></iframe>'
+      + '<button id="cloud-back" onclick="_cloudBack()" style="display:none;position:absolute;top:12px;left:12px;z-index:60;'
+      + 'align-items:center;gap:6px;height:38px;padding:0 15px;background:rgba(7,17,32,.92);border:1px solid rgba(96,165,250,.3);'
+      + 'color:#e8f4ff;font:600 13px Fredoka,sans-serif;border-radius:10px;cursor:pointer;backdrop-filter:blur(8px)">← Back to games</button>';
+    document.getElementById('cloudFrame').srcdoc = _cloudPortalHtml;
+    _cloudWire();
     _cloudLoaded = true;
-    console.log('[N3ptune] Cloud gaming (CloudMoon) portal embedded from ' + _cdnHost);
+    console.log('[N3ptune] Cloud gaming (CloudMoon) portal embedded from ' + usedHost);
   } catch (e) {
     console.warn('[N3ptune] Cloud gaming failed to load', e);
     setState('Couldn’t reach cloud gaming. Check your connection and try again.', true);
