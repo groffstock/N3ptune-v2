@@ -1483,9 +1483,10 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.3</span><span class="cl-date">Jul 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.3.1</span><span class="cl-date">Jul 2026</span></div>
       <ul>
         <li>Added cloud gaming!</li>
+        <li>Fixed some cloud gaming issues</li>
       </ul>
     </div>
   </div>
@@ -5127,24 +5128,35 @@ function _cloudReskin(html, H){
   // string-replacing </body> lands content inside that script, not the live DOM) and
   // (re)attached by an observer so the portal's re-renders can't drop it.
   const SIGNUP_HEAD = `<script>(function(){
-var MH="<div style='max-width:470px;width:100%;max-height:90vh;overflow:auto;background:#071120;border:1px solid rgba(96,165,250,.18);border-radius:18px;padding:26px 24px;color:#e8f4ff;box-shadow:0 24px 60px rgba(0,0,0,.55)'><div style='display:flex;align-items:center;gap:10px;margin-bottom:10px'><svg width='24' height='24' viewBox='0 0 24 24' fill='#2563eb'><path d='M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z'/></svg><h2 style='font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em'>Create an account</h2></div><p style='color:#6b9ab8;font-size:13.5px;line-height:1.55;margin:0 0 16px'>You log in here with an email and password. The quickest way to get set up is to sign in with Google on CloudMoon's own site once, add a password to your account, then come back and log in. It only takes a minute.</p><div style='background:#0a1828;border:1px solid rgba(96,165,250,.12);border-radius:12px;padding:12px 14px;margin-bottom:16px'><div style='font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#60a5fa;margin-bottom:8px'>What you need</div><ul style='margin:0;padding-left:18px;font-size:13.5px;line-height:1.7'><li>A personal device, not a school or work one</li><li>A personal Google account</li></ul></div><ol style='margin:0 0 22px;padding-left:20px;font-size:13.5px;line-height:1.8'><li>On a personal device, open <b style='color:#60a5fa'>web.cloudmoonapp.com</b>.</li><li>Click <b>Sign in</b>, then pick <b>Sign in with Google</b> and choose your account.</li><li>Once you are signed in, click your account in the top right.</li><li>Find <b>Password</b> and click the <b>Set up</b> button next to it.</li><li>Pick a password and save it.</li><li>Come back here and sign in with that email and password.</li></ol><button id='n3su-close' style='width:100%;height:44px;background:#2563eb;color:#fff;border:none;border-radius:12px;font:700 14px Fredoka,sans-serif;cursor:pointer'>Got it</button></div>";
+var MH="<div style='max-width:470px;width:100%;max-height:90vh;overflow:auto;background:#071120;border:1px solid rgba(96,165,250,.18);border-radius:18px;padding:26px 24px;color:#e8f4ff;box-shadow:0 24px 60px rgba(0,0,0,.55)'><div style='display:flex;align-items:center;gap:10px;margin-bottom:10px'><svg width='24' height='24' viewBox='0 0 24 24' fill='#2563eb'><path d='M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z'/></svg><h2 style='font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em'>Create an account</h2></div><p style='color:#6b9ab8;font-size:13.5px;line-height:1.55;margin:0 0 16px'>You log in here with an email and password. The quickest way to get set up is to sign in with Google on CloudMoon's own site once, add a password to your account, then come back and log in. It only takes a minute.</p><div style='background:#0a1828;border:1px solid rgba(96,165,250,.12);border-radius:12px;padding:12px 14px;margin-bottom:16px'><div style='font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#60a5fa;margin-bottom:8px'>What you need</div><ul style='margin:0;padding-left:18px;font-size:13.5px;line-height:1.7'><li>A personal device, not a school or work one</li><li>A personal Google account</li></ul></div><p style='font-size:13.5px;line-height:1.5;margin:0 0 10px;color:#e8f4ff'>On a personal device, go to <b style='color:#60a5fa'>viewoncloud.com</b> or <b style='color:#60a5fa'>web.cloudmoonapp.com</b>, then:</p><ol style='margin:0 0 22px;padding-left:20px;font-size:13.5px;line-height:1.8'><li>Click the <b>Sign in</b> button, then sign in with Google.</li><li>After you have signed in to Google, click your avatar in the top right, then click <b>Set up password</b> and make a password.</li><li>Come back here and sign in with that email and password.</li></ol><button id='n3su-close' style='width:100%;height:44px;background:#2563eb;color:#fff;border:none;border-radius:12px;font:700 14px Fredoka,sans-serif;cursor:pointer'>Got it</button></div>";
 function buildModal(){var ov=document.getElementById("n3su-ov");if(ov)return ov;ov=document.createElement("div");ov.id="n3su-ov";ov.style.cssText="position:fixed;inset:0;z-index:2147483000;background:rgba(5,13,26,.82);display:none;align-items:center;justify-content:center;padding:20px;font-family:Fredoka,sans-serif";ov.innerHTML=MH;ov.addEventListener("click",function(e){if(e.target===ov)ov.style.display="none";});(document.body||document.documentElement).appendChild(ov);var c=ov.querySelector("#n3su-close");if(c)c.onclick=function(){ov.style.display="none";};return ov;}
 function openM(){buildModal().style.display="flex";}
 function ensure(){
   if(!document.body)return;
   var li=false;try{li=!!localStorage.getItem("cm_auth_token");}catch(e){}
-  var btn=document.getElementById("n3su-btn");
-  if(li){if(btn)btn.remove();var ov=document.getElementById("n3su-ov");if(ov)ov.style.display="none";return;}
+  var btn=document.getElementById("n3su-btn"),btn2=document.getElementById("n3su-btn2");
+  if(li){if(btn)btn.remove();if(btn2)btn2.remove();var ov=document.getElementById("n3su-ov");if(ov)ov.style.display="none";return;}
   if(!document.getElementById("n3su-ov"))buildModal();
+  // nav Sign Up button
   var d=document.getElementById("user-area-desktop"),m=document.getElementById("user-area-mobile");
   var area=(d&&d.offsetParent!==null)?d:((m&&m.offsetParent!==null)?m:(d||m||null));
-  if(btn){if(area&&btn.parentNode!==area)area.insertBefore(btn,area.firstChild);return;}
-  btn=document.createElement("button");btn.id="n3su-btn";btn.textContent="Sign Up";
-  btn.style.cssText="display:inline-flex;align-items:center;height:40px;padding:0 20px;margin-right:8px;background:transparent;border:1.5px solid #2563eb;color:#60a5fa;font:700 11px Fredoka,sans-serif;text-transform:uppercase;letter-spacing:.1em;border-radius:12px;cursor:pointer;white-space:nowrap";
-  btn.onmouseover=function(){btn.style.background="rgba(37,99,235,.12)";};btn.onmouseout=function(){btn.style.background="transparent";};
-  btn.onclick=openM;
-  if(area)area.insertBefore(btn,area.firstChild);
-  else{btn.style.position="fixed";btn.style.top="15px";btn.style.right="120px";btn.style.zIndex="2147482000";document.body.appendChild(btn);}
+  if(btn){if(area&&btn.parentNode!==area)area.insertBefore(btn,area.firstChild);}
+  else{
+    btn=document.createElement("button");btn.id="n3su-btn";btn.textContent="Sign Up";
+    btn.style.cssText="display:inline-flex;align-items:center;height:40px;padding:0 20px;margin-right:8px;background:transparent;border:1.5px solid #2563eb;color:#60a5fa;font:700 11px Fredoka,sans-serif;text-transform:uppercase;letter-spacing:.1em;border-radius:12px;cursor:pointer;white-space:nowrap";
+    btn.onmouseover=function(){btn.style.background="rgba(37,99,235,.12)";};btn.onmouseout=function(){btn.style.background="transparent";};
+    btn.onclick=openM;
+    if(area)area.insertBefore(btn,area.firstChild);
+    else{btn.style.position="fixed";btn.style.top="15px";btn.style.right="120px";btn.style.zIndex="2147482000";document.body.appendChild(btn);}
+  }
+  // Sign Up button inside CloudMoon's own login modal (so it's reachable from there too)
+  var lsb=document.getElementById("login-submit-btn");
+  if(lsb&&!document.getElementById("n3su-btn2")){
+    btn2=document.createElement("button");btn2.id="n3su-btn2";btn2.type="button";btn2.textContent="New here? Sign Up";
+    btn2.style.cssText="display:block;width:100%;margin-top:10px;height:42px;background:transparent;border:1.5px solid #2563eb;color:#60a5fa;font:700 13px Fredoka,sans-serif;border-radius:12px;cursor:pointer";
+    btn2.onclick=function(e){if(e&&e.preventDefault)e.preventDefault();openM();};
+    lsb.parentNode.insertBefore(btn2,lsb.nextSibling);
+  }
 }
 var booted=false;function boot(){if(booted)return;booted=true;ensure();try{new MutationObserver(ensure).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}setInterval(ensure,1500);}
 var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);if(document.body)boot();
