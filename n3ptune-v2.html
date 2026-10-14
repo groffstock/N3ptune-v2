@@ -990,7 +990,13 @@ body{font-weight:600}
   })();
 
   async function fetchGitHubKeys() {
-    const mirrors = ['cdn.jsdelivr.net','fastly.jsdelivr.net','gcore.jsdelivr.net','quantil.jsdelivr.net','testingcf.jsdelivr.net','originfastly.jsdelivr.net','cdn.staticdelivr.com'];
+    // jsDelivr first (fast, the normal case); the extra non-jsdelivr.net mirrors
+    // (Mirror 1…N — kept in sync with EXTRA_MIRRORS in the CDN script, which this gate
+    // script can't see) are only queried if every jsDelivr mirror is unreachable, so a
+    // slow extra never delays the gate on a healthy network but still unlocks it when
+    // all of *.jsdelivr.net is blocked.
+    const primary = ['cdn.jsdelivr.net','fastly.jsdelivr.net','gcore.jsdelivr.net','quantil.jsdelivr.net','testingcf.jsdelivr.net','originfastly.jsdelivr.net','cdn.staticdelivr.com'];
+    const extra   = ['cdn.jsdmirror.com','jsd.onmicrosoft.cn','cdn.bili33.top','cdn.jsdmirror.cn','jsdelivr.b-cdn.net','cdn.jsdelivr.net.cn'];
     // Fetch EVERY mirror in parallel and UNION the key lists. jsDelivr's @main
     // edges go stale independently — at any moment one mirror can still serve the
     // old keys.json while another already has the new one, and the ?t= cache-buster
@@ -1000,19 +1006,23 @@ body{font-weight:600}
     // Unioning means a key valid on ANY reachable mirror unlocks, and rotated-out
     // keys keep working until every edge expires. Returns null ONLY if every mirror
     // is unreachable (so callers can tell "can't verify" from "wrong key").
-    const results = await Promise.all(mirrors.map(async m => {
-      try {
-        // staticdelivr uses /branch/ instead of @branch
-        const kPath = m === 'cdn.staticdelivr.com'
-          ? `https://${m}/gh/${REPO}/main/keys.json`
-          : `https://${m}/gh/${REPO}@main/keys.json`;
-        const r = await _keyFetch(kPath + '?t=' + Date.now(), { signal: AbortSignal.timeout(6000) });
-        if (!r.ok) return null;
-        return await r.json();
-      } catch(e) { return null; }
-    }));
-    const ok = results.filter(Boolean);
-    if (!ok.length) return null;                 // every mirror unreachable
+    async function grab(list, timeout) {
+      const results = await Promise.all(list.map(async m => {
+        try {
+          // staticdelivr uses /branch/ instead of @branch
+          const kPath = m === 'cdn.staticdelivr.com'
+            ? `https://${m}/gh/${REPO}/main/keys.json`
+            : `https://${m}/gh/${REPO}@main/keys.json`;
+          const r = await _keyFetch(kPath + '?t=' + Date.now(), { signal: AbortSignal.timeout(timeout) });
+          if (!r.ok) return null;
+          return await r.json();
+        } catch(e) { return null; }
+      }));
+      return results.filter(Boolean);
+    }
+    let ok = await grab(primary, 6000);
+    if (!ok.length) ok = await grab(extra, 8000);  // every jsDelivr mirror blocked — try the extras
+    if (!ok.length) return null;                   // every mirror unreachable
     const set = new Set();
     ok.forEach(j => { (Array.isArray(j) ? j : Object.keys(j)).forEach(k => set.add(String(k))); });
     return [...set];
@@ -1577,13 +1587,39 @@ const CDN_MIRRORS = [
   'testingcf.jsdelivr.net',
   'originfastly.jsdelivr.net',
 ];
-const CDN_MIRRORS_ALL = [...CDN_MIRRORS, 'cdn.staticdelivr.com'];
-// Settings shows mirrors as "jsDelivr 1…6" — the hostnames are noise to a user
-// picking one, and staticdelivr is deliberately NOT offered (it 301s .wasm to a
-// banned host and breaks Ruffle/Unity/Godot games).
+// Extra mirrors on NON-jsdelivr.net domains, same /gh/ + /npm/ jsDelivr path format
+// (so a plain host-swap in _swapMirror works — no URL transform). Fallback for when
+// ALL *.jsdelivr.net is blocked. Shown in settings as "Mirror 1…N". Verified
+// 2026-10-14: each serves gh HTML, gh binaries (covers) AND npm with NO redirect to
+// github — UNLIKE githack / statically, which 301 binaries to raw.githubusercontent.com
+// (a banned + blocked host), so those are deliberately excluded. These are slower and
+// flakier than jsDelivr, so they are fallback-only: resolveCdn() ranks jsDelivr first
+// and only drops to these if every jsDelivr mirror is unreachable.
+const EXTRA_MIRRORS = [
+  'cdn.jsdmirror.com',
+  'jsd.onmicrosoft.cn',
+  // Full mirror, ~1.3 s, and its hostname contains neither "jsdelivr" nor "net", so it
+  // survives even a broad keyword block — the strongest fallback of the lot. (2026-10-14)
+  'cdn.bili33.top',
+  'cdn.jsdmirror.cn',
+  'jsdelivr.b-cdn.net',
+  // Full jsDelivr mirror on a different registrable domain (net.cn). Verified full
+  // (raw .js, binaries, npm, no github redirect). Caveat: its hostname contains the
+  // literal "jsdelivr.net", so a substring/keyword block of "jsdelivr.net" catches it
+  // too — it only survives a precise domain-suffix block of jsdelivr.net. Listed last.
+  'cdn.jsdelivr.net.cn',
+];
+const CDN_MIRRORS_ALL = [...CDN_MIRRORS, ...EXTRA_MIRRORS, 'cdn.staticdelivr.com'];
+// Settings shows jsDelivr mirrors as "jsDelivr 1…6" and the extra ones as "Mirror 1…N"
+// — the hostnames are noise to a user picking one (and obscure which third-party CDN is
+// in use). staticdelivr is deliberately NOT offered (it 301s .wasm to a banned host and
+// breaks Ruffle/Unity/Godot games).
 const cdnLabel = m => {
   const i = CDN_MIRRORS.indexOf(m);
-  return i < 0 ? m : 'jsDelivr ' + (i + 1);
+  if (i >= 0) return 'jsDelivr ' + (i + 1);
+  const j = EXTRA_MIRRORS.indexOf(m);
+  if (j >= 0) return 'Mirror ' + (j + 1);
+  return m;
 };
 const CDN_TEST_PATH = '/gh/freebuisness/assets@main/zones.json';
 const ALL_CDN_HOSTS = /(\/\/)([a-z]+\.jsdelivr\.net)/g;
@@ -1664,7 +1700,7 @@ async function resolveCdn() {
     // still pinned to it from an older build would be stuck on a mirror that
     // 301s .wasm — with no way to see it. Drop the stale pick and re-rank.
     const saved = localStorage.getItem('n3_cdn');
-    if (saved && CDN_MIRRORS.includes(saved)) {
+    if (saved && (CDN_MIRRORS.includes(saved) || EXTRA_MIRRORS.includes(saved))) {
       _cdnHost = saved;
       _cdnOk = true;
       _cdnResolved = true;
@@ -1693,15 +1729,30 @@ async function resolveCdn() {
         return { mirror, ok: false };
       }
     }));
-    const working = results.filter(r => r.ok).sort((a, b) => a.ms - b.ms);
+    let working = results.filter(r => r.ok).sort((a, b) => a.ms - b.ms);
+    if (!working.length) {
+      // Every *.jsdelivr.net mirror is blocked/unreachable — fall back to the extra
+      // non-jsdelivr.net mirrors (Mirror 1…N). Only paid for in this (rare) case, and
+      // given a longer timeout since those CDNs are slower.
+      console.warn('[N3ptune] No jsDelivr mirror reachable — trying extra mirrors…');
+      const extra = await Promise.all(EXTRA_MIRRORS.map(async mirror => {
+        const t0 = Date.now();
+        try {
+          const r = await _origFetch(`https://${mirror}/gh/freebuisness/assets@main/zones.json`, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+          if (r.ok) { const text = await r.text(); if (text && text.length > 10) return { mirror, ms: Date.now() - t0, ok: true, text }; }
+          return { mirror, ok: false };
+        } catch(e) { return { mirror, ok: false }; }
+      }));
+      working = extra.filter(r => r.ok).sort((a, b) => a.ms - b.ms);
+    }
     _cdnOk = working.length > 0;
     if (working.length) {
       _cdnHost = working[0].mirror;
       // Cache the zones.json text from the fastest mirror so loadGN() doesn't re-fetch
       _cdnZonesText = working[0].text;
-      console.log('[N3ptune] CDN ranking:', working.map(r => `${r.mirror} ${r.ms}ms`).join(', '));
+      console.log('[N3ptune] CDN ranking:', working.map(r => `${cdnLabel(r.mirror)} ${r.ms}ms`).join(', '));
     } else {
-      console.warn('[N3ptune] All CDN mirrors failed, using default');
+      console.warn('[N3ptune] All CDN mirrors failed (jsDelivr + extra), using default');
     }
     _cdnResolved = true;
     return _cdnHost;
@@ -1728,11 +1779,13 @@ async function testAllCdns() {
   const resultsEl = document.getElementById('cdnTestResults');
   if (!resultsEl) return;
   resultsEl.textContent = 'Testing all mirrors...';
-  const results = await Promise.all(CDN_MIRRORS.map(async mirror => {
+  const results = await Promise.all([...CDN_MIRRORS, ...EXTRA_MIRRORS].map(async mirror => {
     const t0 = Date.now();
     try {
-      const r = await fetch(`https://${mirror}/gh/freebuisness/assets@main/zones.json`, {
-        cache: 'no-store', signal: AbortSignal.timeout(6000)
+      // _origFetch (unpatched) so each mirror's own host is tested, not rewritten to
+      // _cdnHost. Longer timeout: the extra mirrors are slower.
+      const r = await _origFetch(`https://${mirror}/gh/freebuisness/assets@main/zones.json`, {
+        cache: 'no-store', signal: AbortSignal.timeout(9000)
       });
       if (r.ok) {
         const text = await r.text();
@@ -1757,7 +1810,7 @@ async function testAllCdns() {
 function buildCdnSelect() {
   const sel = document.getElementById('cdnSelect');
   if (!sel) return;
-  sel.innerHTML = CDN_MIRRORS.map(m =>
+  sel.innerHTML = [...CDN_MIRRORS, ...EXTRA_MIRRORS].map(m =>
     `<option value="${m}"${m === _cdnHost ? ' selected' : ''}>${cdnLabel(m)}</option>`
   ).join('');
 }
