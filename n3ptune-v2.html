@@ -1496,7 +1496,7 @@ body{font-weight:600}
       <div class="cl-ver"><span class="cl-tag">v2.3.1</span><span class="cl-date">Jul 2026</span></div>
       <ul>
         <li>Added cloud gaming!</li>
-        <li>Fixed some cloud gaming issues</li>
+        <li>Fixed even more cloud gaming issues</li>
       </ul>
     </div>
   </div>
@@ -5214,7 +5214,20 @@ function ensure(){
 var booted=false;function boot(){if(booted)return;booted=true;ensure();try{new MutationObserver(ensure).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}setInterval(ensure,1500);}
 var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);if(document.body)boot();
 })();<\/script>`;
-  html = html.replace('<head>', '<head><script>(function(){' + JSD_SHIM + '})();<\/script>' + SIGNUP_HEAD);
+  // CloudMoon's handlePlay does alert("Fail: "+resp.message) when its /phone/connect
+  // launch API rejects a stream, and that message comes back BLANK — so a user who
+  // can't get a server just sees a cryptic "Fail:" with nothing after it (NOT a CDN /
+  // mirror problem; /phone/connect is CloudMoon's own API, never jsDelivr). We can't
+  // make CloudMoon allocate a device, but we can turn the blank alert into a real
+  // explanation. Wraps window.alert in a head script (runs before handlePlay). No em dashes.
+  const ALERT_FIX = '<script>(function(){'
+    + 'var _al=window.alert;'
+    + 'window.alert=function(m){try{var s=String(m==null?"":m);'
+    +   'if(/^Fail:\\s*(undefined)?\\s*$/i.test(s)){return _al("Couldn\\u2019t start the stream right now. CloudMoon\\u2019s game servers may be busy, or your session needs a refresh. Make sure you are signed in and still have play time left, then try again in a moment.");}'
+    +   'if(/^Fail:\\s*/i.test(s)){return _al("Couldn\\u2019t start the stream: "+s.replace(/^Fail:\\s*/i,"")+". CloudMoon\\u2019s servers may be busy, so try again in a moment.");}'
+    + '}catch(e){}return _al.apply(this,arguments);};'
+    + '})();<\/script>';
+  html = html.replace('<head>', '<head><script>(function(){' + JSD_SHIM + '})();<\/script>' + ALERT_FIX + SIGNUP_HEAD);
   // Brand → N3ptune
   html = html.replace('<title>CloudMoon</title>', '<title>N3ptune Cloud</title>');
   html = html.replace(/<img src="https:\/\/cloudmoonapp\.com\/favicon\.ico"[^>]*>/,
