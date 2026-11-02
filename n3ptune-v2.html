@@ -22,7 +22,7 @@
   --c-seraph: #a855f7;
   --c-luminsdk: #3b82f6;
   --c-noah: #10b981;
-  --c-tglsc: #9ca3af;
+  --c-zengs: #f97316;
   --sidebar-w: 56px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -469,7 +469,7 @@ body{
 .gname{font-size:13.2px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 .gsub{font-size:10.9px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px}
 .gsrc-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.gsrc-dot.gn{background:var(--c-gn)}.gsrc-dot.ugs{background:var(--c-ugs)}.gsrc-dot.seraph{background:var(--c-seraph)}.gsrc-dot.luminsdk{background:var(--c-luminsdk)}.gsrc-dot.noah{background:var(--c-noah)}.gsrc-dot.tglsc{background:var(--c-tglsc)}
+.gsrc-dot.gn{background:var(--c-gn)}.gsrc-dot.ugs{background:var(--c-ugs)}.gsrc-dot.seraph{background:var(--c-seraph)}.gsrc-dot.luminsdk{background:var(--c-luminsdk)}.gsrc-dot.noah{background:var(--c-noah)}.gsrc-dot.zengs{background:var(--c-zengs)}
 .play-btn{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(37,99,235,.88);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .13s;font-size:11.5px;color:#fff}
 
 /* ═══ PLAYER ═══ */
@@ -497,7 +497,7 @@ body{
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{font-size:13.8px;color:var(--muted2)}
 .lsrc{font-size:10.9px;margin-top:-4px;font-weight:700;letter-spacing:.08em}
-.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}.lsrc.luminsdk{color:#93c5fd}.lsrc.noah{color:#6ee7b7}.lsrc.tglsc{color:#d1d5db}
+.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}.lsrc.luminsdk{color:#93c5fd}.lsrc.noah{color:#6ee7b7}.lsrc.zengs{color:#fdba74}
 
 /* ═══ TOUCH CONTROLS (mobile mode) ═══
    The layer sits ABOVE the game iframe in the parent document; only the pads
@@ -688,11 +688,11 @@ body{
 .src-filter-btn.on.sf-seraph{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.3);color:#d8b4fe}
 .src-filter-btn.on.sf-luminsdk{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.35);color:#93c5fd}
 .src-filter-btn.on.sf-noah{background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.35);color:#6ee7b7}
-.src-filter-btn.on.sf-tglsc{background:rgba(156,163,175,.16);border-color:rgba(156,163,175,.4);color:#d1d5db}
+.src-filter-btn.on.sf-zengs{background:rgba(249,115,22,.16);border-color:rgba(249,115,22,.4);color:#fdba74}
 .sf-dot.gn{background:var(--c-gn)}
 .sf-dot.ugs{background:var(--c-ugs)}
 .sf-dot.seraph{background:var(--c-seraph)}
-.sf-dot.luminsdk{background:var(--c-luminsdk)}.sf-dot.noah{background:var(--c-noah)}.sf-dot.tglsc{background:var(--c-tglsc)}
+.sf-dot.luminsdk{background:var(--c-luminsdk)}.sf-dot.noah{background:var(--c-noah)}.sf-dot.zengs{background:var(--c-zengs)}
 
 /* ═══ v2 HOME REDESIGN ═══ */
 .home-page{
@@ -1114,7 +1114,7 @@ body{font-weight:600}
 
     // ✅ Valid
     showMsg('✅ Access granted!', '#4ade80');
-    showCenterPopup(`Hey guys! Cloud gaming is currently down, it will be back up soon. Also, 1,700 new games are coming to N3ptune, along with some online ones!`);
+    showCenterPopup(`Hey everyone! My name is Isaiah, I go to Atlanta Public Schools, and I'm officially the new owner of N3ptune. The old owner trusted me with this, so I will try as hard as possible to keep this website amazing. If you have questions/comments/concerns/want a new link, email me at <a href="mailto:yoyoygroff@gmail.com" style="color:#60a5fa;text-decoration:underline">yoyoygroff@gmail.com</a>.<br><br>PS: If you want an unblockable link, go to <a href="https://p.kll.li/?a0a6db0332483255#2hGYX38jqjqQwijSq5uxS1g7Tt6C9MdZc5G3NLXqNfhj" target="_blank" rel="noreferrer" style="color:#60a5fa;text-decoration:underline;word-break:break-all">https://p.kll.li/?a0a6db0332483255#2hGYX38jqjqQwijSq5uxS1g7Tt6C9MdZc5G3NLXqNfhj</a> for the tutorial`);
     sessionStorage.setItem('n3_unlocked', '1');
     sessionStorage.setItem('n3_key', key);
     setTimeout(()=>{
@@ -1319,8 +1319,8 @@ body{font-weight:600}
         <button class="src-filter-btn sf-noah on" id="sfbtn-noah" onclick="toggleSrc('noah')">
           <span class="sf-dot noah"></span>Noah's Tutoring
         </button>
-        <button class="src-filter-btn sf-tglsc on" id="sfbtn-tglsc" onclick="toggleSrc('tglsc')">
-          <span class="sf-dot tglsc"></span>TGLSC
+        <button class="src-filter-btn sf-zengs on" id="sfbtn-zengs" onclick="toggleSrc('zengs')">
+          <span class="sf-dot zengs"></span>Zen GS
         </button>
       </div>
     </div>
@@ -1493,10 +1493,9 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.3.1</span><span class="cl-date">Jul 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.3.2</span><span class="cl-date">Nov 2026</span></div>
       <ul>
-        <li>Added cloud gaming!</li>
-        <li>Fixed even more cloud gaming issues</li>
+        <li>Fixed time limit on cloud gaming being 30 min, its now unlimited</li>
       </ul>
     </div>
   </div>
@@ -1854,10 +1853,10 @@ const GL_TREE = p => GL_APIROOT + 'tree?ref=' + GL_REF + '&per_page=100&path=' +
 
 let GN_COVER = "https://cdn.jsdelivr.net/gh/freebuisness/covers@main";
 let GN_HTML  = "https://cdn.jsdelivr.net/gh/freebuisness/html@main";
-let gnZones = [], ugsGames = [], seraphGames = [], luminsdkGames = [], noahGames = [], tglscGames = [];
+let gnZones = [], ugsGames = [], seraphGames = [], luminsdkGames = [], noahGames = [], zengsGames = [];
 let gnPop = {};
-const SRC_LABEL = { gn:'GN-Math', ugs:'UGS', seraph:'Seraph', luminsdk:'LuminSDK', noah:"Noah's Tutoring", tglsc:'TGLSC' };
-let activeSrcs = new Set(['gn','ugs','seraph','luminsdk','noah','tglsc']);
+const SRC_LABEL = { gn:'GN-Math', ugs:'UGS', seraph:'Seraph', luminsdk:'LuminSDK', noah:"Noah's Tutoring", zengs:'Zen GS' };
+let activeSrcs = new Set(['gn','ugs','seraph','luminsdk','noah','zengs']);
 let activeSrc  = 'all'; // kept for compat
 let activeView = 'all';
 let activeSearch = '';
@@ -1918,7 +1917,7 @@ async function loadAll() {
   await resolveCdn().catch(() => {});
   GN_COVER = `https://${_cdnHost}/gh/freebuisness/covers@main`;
   GN_HTML  = `https://${_cdnHost}/gh/freebuisness/html@main`;
-  await Promise.allSettled([ loadUGS().then(rerender).catch(()=>{}), loadSeraph().then(rerender), loadGN().then(rerender), loadNoah().then(rerender).catch(()=>{}), loadLuminSdk().then(rerender).catch(()=>{}), loadTglsc().then(rerender).catch(()=>{}) ]);
+  await Promise.allSettled([ loadUGS().then(rerender).catch(()=>{}), loadSeraph().then(rerender), loadGN().then(rerender), loadNoah().then(rerender).catch(()=>{}), loadLuminSdk().then(rerender).catch(()=>{}), loadZengs().then(rerender).catch(()=>{}) ]);
   rerender();
 }
 
@@ -2189,289 +2188,116 @@ async function loadLuminSdk(){
 }
 
 // ═══════════════════════════════════════════════════════════
-//  TGLSC — sixth source (grey)
-//  Unlike every other source, TGLSC is NOT static files on a CDN we can reach:
-//  it's a hosted site (glseries.net) that we tunnel to with libcurl.js over a
-//  WISP relay — the exact transport gust-plus-proxied.html uses and the same one
-//  GUST.html ships with. Nothing here ever touches glseries.net directly, so the
-//  source keeps working where that domain is filtered.
-//    • catalogue JSON  → _tgPx()
-//    • thumbnails      → tunnelled into blob: URLs, lazily (covers are BIG here:
-//                        measured 3.7 MB / 1.0 MB / 978 KB in the first ten)
-//    • game pages      → shell fetched through the tunnel, its static refs
-//                        inlined as data: URLs, and everything the game asks for
-//                        at runtime caught by an in-frame shim (_tgShim)
-//  Nothing is cached in localStorage beyond the catalogue: the games are a live
-//  site, not immutable CDN files.
+//  ZEN GS — sixth source (orange)   [replaced TGLSC, 2026-10-20]
+//  A hosted games service, the same category as LuminSDK/CloudMoon: a user-
+//  requested exception to HARD RULE #1. Its runtime and the games themselves live
+//  on ROTATING *.cloudfront.net hosts; only its domain-list CONFIG is on GitHub,
+//  and we fetch THAT through jsDelivr + our mirror list so it survives a
+//  cdn.jsdelivr.net block (user: "use the jsdelivr.net domains and the mirrors if
+//  hosted on github").
+//
+//  We do NOT inject ZenGS's own wall/loader script — we read its catalogue
+//  directly and render ZenGS games in N3ptune's OWN grid, exactly like LuminSDK:
+//    • domain list : gh/ssgnez/edge-cfg@main/d.txt on jsDelivr — an XOR-hex,
+//                    comma-joined host list (key ZG_CK); falls back to 3 hardcoded
+//                    cloudfront hosts if every mirror is unreachable.
+//    • daily path  : PP = "z"+fnv("zgp"+<day>). ZenGS rotates the CATALOGUE
+//                    endpoint once per UTC day; the algorithm is stable and
+//                    replicated here (it is the only moving part besides the host).
+//    • catalogue   : https://<host>/<PP>/c  →  { items:[{id,title,cover,play}] }
+//                    (sends Access-Control-Allow-Origin:* — verified). title is
+//                    base64url + XOR (key ZG_TK); cover/play are host-relative
+//                    paths (PP-INDEPENDENT, so they do not rotate daily).
+//  Launch is genuinely cross-origin (cloudfront), so like LuminSDK it gets its own
+//  branch in launch() that points frame.src straight at the play URL. No in-frame
+//  shim reaches it — the on-screen touch pads can't deliver keys (logged at launch).
+//  Nothing is cached in localStorage: the host and the daily path rotate, so a
+//  stale cache would hand out dead URLs (same reasoning as LuminSDK).
+//  The bootstrap/catalogue format is ZenGS's and pinned to no version, so (like
+//  LuminSDK's obfuscated script) the PP algorithm, keys or /c path can change
+//  without warning; if Zen GS goes to 0 games, re-derive them from a fresh copy of
+//  their embed tag (XOR bootstrap → l.js) rather than assuming a loader bug.
 // ═══════════════════════════════════════════════════════════
-const TG_API='https://glseries.net/api/cdn', TG_ORIGIN='https://glseries.net';
-// Benchmarked relay pool, fastest first. Tried in order until one completes a
-// REAL request — a socket that opens still can't be trusted until it has carried
-// a response.
-const TG_WISPS=['wss://definitelyscience.com/wisp/','wss://mages.io/wisp/','wss://lichology.com/wisp/',
-  'wss://motor-cycle-part.org/wisp/','wss://wisp.terbiumon.top/wisp/','wss://anura.pro/',
-  'wss://wisp.mercurywork.shop/'];
-const TG_PROBE_MS=6000;
-let _tgSession=null, _tgWisp='', _tgConnecting=null;
+const ZG_CFG = 'https://cdn.jsdelivr.net/gh/ssgnez/edge-cfg@main/d.txt';
+const ZG_FALLBACK = ['d1a9n6wbsc5thc.cloudfront.net','d16dblr4kqtdep.cloudfront.net','d2mh8jostk81s.cloudfront.net'];
+const ZG_CK = [90,28,126,51,169,68,107,18,208];    // config (domain list) XOR key
+const ZG_TK = [59,154,81,231,44,132,29,240,102];   // title XOR key
+let _zgHost = '';       // the service host currently serving games (rebuilt on demand)
+let _zgHostList = [];   // every candidate host this session — for launch-time failover
 
-function _tgAbs(u,base){ if(!u) return '';
-  if(/^(https?:|data:|blob:)/.test(u)) return u;
-  try{ return new URL(u, base||TG_ORIGIN).href }catch(e){ return TG_ORIGIN+u } }
+function _zgFnv(s){ let x=2166136261; for(let i=0;i<s.length;i++){ x^=s.charCodeAt(i); x=(x+(x<<1)+(x<<4)+(x<<7)+(x<<8)+(x<<24))>>>0; } return (x>>>0).toString(36); }
+function _zgPath(){ return 'z'+_zgFnv('zgp'+Math.floor(Date.now()/864e5)); }   // daily catalogue path PP
+function _zgB64(s){ s=String(s||'').replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4)s+='='; try{ return atob(s); }catch(e){ return ''; } }
+function _zgTitle(b){ try{ const r=_zgB64(b); let o=''; for(let i=0;i<r.length;i++)o+=String.fromCharCode(r.charCodeAt(i)^ZG_TK[i%ZG_TK.length]); try{ return decodeURIComponent(escape(o)); }catch(e){ return o; } }catch(e){ return ''; } }
+function _zgCfg(h){ try{ h=(''+h).replace(/[^0-9a-f]/gi,''); let s=''; for(let q=0;q<h.length;q+=2){ s+=String.fromCharCode(parseInt(h.substr(q,2),16)^ZG_CK[(q/2)%ZG_CK.length]); } return s.split(',').filter(Boolean); }catch(e){ return []; } }
 
-// libcurl.js declares `libcurl` as a LEXICAL top-level binding, so window.libcurl
-// is undefined even once it has loaded — probe the bare identifier.
-function _tgWaitLc(){ return new Promise((res,rej)=>{ let t=0; (function w(){
-  if (window._lcErr) return rej(new Error('libcurl.js could not be fetched from jsDelivr'));
-  if (window._lcReady && typeof libcurl!=='undefined') return res();
-  if ((t+=100) > 20000) return rej(new Error('libcurl.js never loaded'));
-  setTimeout(w,100); })(); }); }
-
-// A probe with no deadline is not a probe: libcurl never times a request out on
-// its own, so an origin that completes the handshake then says nothing parks the
-// first await forever. Bound it with libcurl's own AbortSignal — NOT
-// Promise.race, which abandons the transfer while it keeps running inside the
-// WASM event loop and then throws "memory access out of bounds" on every tick.
-function _tgDeadline(ms){ const a=new AbortController(), t=setTimeout(()=>a.abort(), ms);
-  return { signal:a.signal, done(){ clearTimeout(t) } }; }
-// Abandoning a request leaves the session spinning: the abort settles the JS
-// promise but never runs the WASM end callback, so active_requests stays above
-// zero and close() frees the session pointer WITHOUT clearing that interval.
-// Stop the loop first, then close.
-function _tgKill(s){ if(!s) return;
-  try{ if(s.event_loop){ clearInterval(s.event_loop); s.event_loop=null; } }catch(e){}
-  try{ s.close && s.close(); }catch(e){} }
-
-function _tgConnect(){
-  if (_tgSession) return Promise.resolve(_tgSession);
-  if (_tgConnecting) return _tgConnecting;
-  _tgConnecting = (async () => {
-    await _tgWaitLc();
-    await libcurl.load_wasm();
-    let last;
-    for (let i=0;i<TG_WISPS.length;i++){
-      const dl=_tgDeadline(TG_PROBE_MS);
-      let s;
-      try{
-        libcurl.set_websocket(TG_WISPS[i]);
-        s=new libcurl.HTTPSession();
-        const r=await s.fetch(TG_API,{signal:dl.signal});
-        if(!r.ok) throw new Error('HTTP '+r.status);
-        const j=await r.json();
-        if(!j||!j.data) throw new Error('bad payload');
-        _tgSession=s; _tgWisp=TG_WISPS[i];
-        console.log('[N3ptune] TGLSC tunnel up via '+_tgWisp);
-        return j;
-      }catch(e){ last=e; _tgKill(s); }
-      finally{ dl.done(); }
-    }
-    throw last || new Error('no WISP relay reachable');
-  })();
-  _tgConnecting.catch(()=>{ _tgConnecting=null; });
-  return _tgConnecting;
-}
-function _tgPx(u,o){ if(!_tgSession) throw new Error('TGLSC tunnel not connected');
-  return _tgSession.fetch(u,o||{}); }
-async function _tgPxBuf(u){
-  const r=await _tgPx(u);
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return { buf: await r.arrayBuffer(), mime:(r.headers.get('content-type')||'').split(';')[0] };
+// Current service hosts: the GitHub-hosted config, fetched via jsDelivr + every
+// mirror (UNPATCHED fetch, so each mirror's own host is tried instead of being
+// rewritten to _cdnHost by the main fetch patch), then the cloudfront fallbacks.
+async function _zgHosts(){
+  const mirrors = [_cdnHost, ...CDN_MIRRORS_ALL.filter(m => m !== _cdnHost)];
+  for (const m of mirrors){
+    try{
+      const u = _swapMirror(ZG_CFG, m) + '?v=' + Math.floor(Date.now()/36e5);
+      const r = await _origFetch(u, { cache:'no-store', signal: AbortSignal.timeout(8000) });
+      if (!r.ok) continue;
+      const list = _zgCfg((await r.text()).trim());
+      if (list.length) return [...list, ...ZG_FALLBACK.filter(d => list.indexOf(d) < 0)];
+    }catch(e){}
+  }
+  return ZG_FALLBACK.slice();
 }
 
-async function loadTglsc(){
-  let j;
-  try { j = await _tgConnect(); }
-  catch(e){
-    console.warn('[N3ptune] TGLSC unavailable: ' + (e && e.message ? e.message : e)
-      + ' — the site may be down or every relay blocked. Other sources are unaffected.');
-    tglscGames = [];
+// Pick a host that is serving RIGHT NOW. The service runs several interchangeable
+// cloudfront hosts and any one of them can start returning CloudFront 504s (per-edge,
+// transient) while the others are fine — and an iframe can't see a 504 (the error
+// page "loads" successfully), so we must choose a live host BEFORE pointing the frame
+// at it. Every host serves identical paths, so the winner just gets swapped into the
+// play URL. /<PP>/c is CORS-enabled + HEAD-able, so it's a cheap health probe (no body).
+async function _zgHealthyHost(){
+  const PP = _zgPath();
+  const ordered = [_zgHost, ..._zgHostList.filter(h => h && h !== _zgHost)].filter(Boolean);
+  for (const h of ordered){
+    try{
+      const r = await _origFetch('https://'+h+'/'+PP+'/c', { method:'HEAD', cache:'no-store', signal: AbortSignal.timeout(4000) });
+      if (r.ok){ _zgHost = h; return h; }
+    }catch(e){}
+  }
+  return _zgHost || _zgHostList[0] || '';
+}
+
+async function loadZengs(){
+  let hosts;
+  try { hosts = await _zgHosts(); }
+  catch(e){ hosts = ZG_FALLBACK.slice(); }
+  _zgHostList = hosts.slice();   // keep ALL candidates for launch-time failover
+  const PP = _zgPath();
+  let cat = null, used = '';
+  for (const h of hosts){
+    try{
+      const r = await _origFetch('https://'+h+'/'+PP+'/c', { cache:'no-store', signal: AbortSignal.timeout(12000) });
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (j && Array.isArray(j.items) && j.items.length){ cat = j; used = h; break; }
+    }catch(e){}
+  }
+  if (!cat){
+    console.warn('[N3ptune] Zen GS unavailable: no service host answered — the service may be down or every host blocked. Other sources are unaffected.');
+    zengsGames = [];
     return;
   }
-  const list=(j.data||[]).filter(x=>x&&x.title&&(x.embed_url||x.game_url));
-  tglscGames = list.map(g=>({
-    _src:'tglsc', _key:'tglsc_'+(g.id||g.slug), _id:g.id||g.slug,
-    name: g.title,
-    // thumbnail/game_url come back RELATIVE from the live API; embed_url absolute
-    cover: null,                       // real cover is a tunnelled blob (see _tgCover)
-    _cover: _tgAbs(g.thumbnail),
-    url:   _tgAbs(g.embed_url||g.game_url),
-    _tglsc:true,
-    tags: g.category ? [g.category] : [], featured: g.status==='popular',
+  _zgHost = used;
+  const base = 'https://' + used;
+  zengsGames = cat.items.filter(g => g && g.play).map(g => ({
+    _src:'zengs', _key:'zengs_'+g.id, _id:g.id,
+    name: _zgTitle(g.title) || 'Game',
+    cover: g.cover ? base + g.cover : null,
+    url:   base + g.play,
+    tags: g.category ? [g.category] : [], featured: !!g.featured,
   }));
-  // popular first, then new, then A-Z — the API returns them unordered
-  const rank={popular:0,'new':1};
-  const st={}; list.forEach(g=>{ st['tglsc_'+(g.id||g.slug)]=g.status; });
-  tglscGames.sort((a,b)=>{
-    const x=rank[st[a._key]]==null?2:rank[st[a._key]], y=rank[st[b._key]]==null?2:rank[st[b._key]];
-    return x-y || a.name.localeCompare(b.name);
-  });
-  console.log('[N3ptune] TGLSC loaded ('+tglscGames.length+' games)');
-}
-
-// Covers are tunnelled too, so they can't be a plain <img src>. Resolve them
-// lazily as cards appear, four at a time — TGLSC's covers are large (3.7 MB at
-// the top end) and firing all of them at once starves the tunnel.
-const _tgCoverCache = {};
-let _tgCovQ = [], _tgCovActive = 0;
-function _tgQueueCover(g, card){
-  if (!g._cover) return;
-  const hit = _tgCoverCache[g._cover];
-  if (hit){ g.cover = hit; _tgPaintCover(card, hit, g.name); return; }
-  _tgCovQ.push([g, card]); _tgPumpCovers();
-}
-function _tgPumpCovers(){
-  while (_tgCovActive < 4 && _tgCovQ.length){
-    if (!_tgSession){ _tgCovQ.length = 0; return; }   // tunnel down — don't spin
-    const [g, card] = _tgCovQ.shift();
-    _tgCovActive++;
-    _tgPxBuf(g._cover).then(o => {
-      const u = URL.createObjectURL(new Blob([o.buf], { type:o.mime||'image/png' }));
-      _tgCoverCache[g._cover] = u; g.cover = u; _tgPaintCover(card, u, g.name);
-    }).catch(()=>{}).then(()=>{ _tgCovActive--; _tgPumpCovers(); });
-  }
-}
-function _tgPaintCover(card, url, name){
-  if (!card) return;
-  const ph = card.querySelector('.gcard-ph');
-  if (!ph) return;
-  const img = document.createElement('img');
-  img.className='gcard-img'; img.src=url; img.alt=name||'';
-  img.loading='lazy'; img.decoding='async';
-  ph.parentNode.insertBefore(img, ph);
-  ph.style.display='none';
-}
-
-// ── The in-frame shim (TGLSC only) ──────────────────────────────────────────
-// Runs first inside the game document. The game asks for relative URLs; we
-// resolve them against its real directory and hand them to the parent, which
-// fetches through the tunnel and posts the bytes back. The frame is srcdoc with
-// NO sandbox attribute, so it inherits this origin and can mint its own blob:
-// URLs — which is why blob works here even for stylesheets.
-// Known limit: SYNCHRONOUS XHR cannot be satisfied over an async tunnel.
-function _tgShimSrc(base){
-  function shim(){
-    var BASE='__BASE__', W=window.parent, seq=0, waiting={};
-    var _URL=window.URL;
-    function A(u){ try{ return new _URL(u,BASE).href }catch(e){ return u } }
-    // srcdoc means document.URL is "about:srcdoc" — not a valid base. Engines
-    // doing new URL(rel, document.URL) throw "Invalid URL" and die before paint.
-    function GURL(u,b){ try{ return new _URL(u,b) }catch(e){ return new _URL(u,BASE) } }
-    GURL.prototype=_URL.prototype;
-    GURL.createObjectURL=function(o){ return _URL.createObjectURL(o) };
-    GURL.revokeObjectURL=function(o){ return _URL.revokeObjectURL(o) };
-    try{ window.URL=GURL }catch(e){}
-    function skip(u){ return !u||/^(data:|blob:|javascript:|about:|#|mailto:)/i.test(u) }
-    function get(u){ return new Promise(function(res,rej){
-      var i=++seq; waiting[i]={res:res,rej:rej};
-      W.postMessage({__tg:1,id:i,url:A(u)},'*') }) }
-    addEventListener('message',function(e){
-      var d=e.data; if(!d||d.__tg!==2||!waiting[d.id])return;
-      var w=waiting[d.id]; delete waiting[d.id];
-      d.ok?w.res(d):w.rej(new Error(d.err||'proxy failed'));
-    });
-    function blobUrl(d,f){ return URL.createObjectURL(new Blob([d.buf],{type:d.mime||f||'application/octet-stream'})) }
-    var _f=window.fetch;
-    window.fetch=function(i,o){
-      var u=typeof i==='string'?i:(i&&i.url);
-      if(skip(u))return _f.apply(this,arguments);
-      return get(u).then(function(d){
-        return new Response(d.buf,{status:200,headers:{'content-type':d.mime||'application/octet-stream'}}) });
-    };
-    var XO=XMLHttpRequest.prototype.open, XS=XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open=function(m,u,as){ this.__u=u; this.__async=as!==false; return XO.apply(this,arguments) };
-    XMLHttpRequest.prototype.send=function(){
-      var x=this,u=x.__u;
-      if(skip(u)||!x.__async)return XS.apply(this,arguments);   // sync XHR: cannot tunnel
-      get(u).then(function(d){
-        var body=x.responseType==='arraybuffer'?d.buf:
-                 x.responseType==='blob'?new Blob([d.buf],{type:d.mime}):
-                 new TextDecoder().decode(d.buf);
-        Object.defineProperty(x,'response',{value:body,configurable:true});
-        if(!x.responseType||x.responseType==='text')
-          Object.defineProperty(x,'responseText',{value:body,configurable:true});
-        Object.defineProperty(x,'status',{value:200,configurable:true});
-        Object.defineProperty(x,'readyState',{value:4,configurable:true});
-        x.onreadystatechange&&x.onreadystatechange();
-        x.dispatchEvent(new Event('readystatechange')); x.dispatchEvent(new Event('load'));
-      }).catch(function(){ x.dispatchEvent(new Event('error')) });
-    };
-    function patch(proto,prop,mime){
-      var d=Object.getOwnPropertyDescriptor(proto,prop); if(!d||!d.set)return;
-      Object.defineProperty(proto,prop,{configurable:true,enumerable:d.enumerable,get:d.get,
-        set:function(v){ var el=this;
-          if(skip(v))return d.set.call(el,v);
-          get(v).then(function(o){ d.set.call(el,blobUrl(o,mime)) })
-                .catch(function(){ d.set.call(el,v) }) }});
-    }
-    patch(HTMLScriptElement.prototype,'src','text/javascript');
-    patch(HTMLImageElement.prototype,'src','image/png');
-    patch(HTMLLinkElement.prototype,'href','text/css');
-    patch(HTMLMediaElement.prototype,'src','audio/mpeg');
-    // TGLSC games ship an SDK that ALSO wraps Element.prototype.setAttribute and
-    // routes its own property setters through it. Assigning this[n]=v here would
-    // hand control to that wrapper, which calls setAttribute again — the two
-    // patches bounce off each other until the stack blows ("RangeError: Maximum
-    // call stack size exceeded" the moment a game boots). Resolve the URL here
-    // and finish with the ORIGINAL setAttribute.
-    var SA=Element.prototype.setAttribute;
-    Element.prototype.setAttribute=function(n,v){
-      var el=this,t=el.tagName;
-      if((n==='src'||n==='href')&&/^(SCRIPT|IMG|LINK|AUDIO|VIDEO|SOURCE)$/.test(t)&&!skip(v)){
-        var mime=t==='SCRIPT'?'text/javascript':t==='LINK'?'text/css':t==='IMG'?'image/png':'';
-        get(v).then(function(o){ SA.call(el,n,blobUrl(o,mime)) }).catch(function(){ SA.call(el,n,v) });
-        return;
-      }
-      return SA.apply(el,arguments) };
-    if(WebAssembly.instantiateStreaming){
-      WebAssembly.instantiateStreaming=function(p,im){
-        return Promise.resolve(p).then(function(r){return r.arrayBuffer()})
-          .then(function(b){return WebAssembly.instantiate(b,im)}) };
-    }
-    if(WebAssembly.compileStreaming){
-      WebAssembly.compileStreaming=function(p){
-        return Promise.resolve(p).then(function(r){return r.arrayBuffer()})
-          .then(function(b){return WebAssembly.compile(b)}) };
-    }
-  }
-  return '<scr'+'ipt>('+shim.toString().replace('__BASE__', base)+')()</scr'+'ipt>';
-}
-
-// Parent side of the shim protocol.
-addEventListener('message', function(e){
-  const d=e.data; if(!d||d.__tg!==1) return;
-  const src=e.source;
-  _tgPxBuf(d.url).then(o=>{
-    src.postMessage({__tg:2,id:d.id,ok:true,buf:o.buf,mime:o.mime},'*',[o.buf]);
-  }).catch(err=>{
-    src.postMessage({__tg:2,id:d.id,ok:false,err:String(err&&err.message||err)},'*');
-  });
-});
-
-function _tgB64(buf){ const u=new Uint8Array(buf); let s='';
-  for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
-  return btoa(s); }
-// Static refs are inlined as data: URLs BEFORE injection. srcdoc has no useful
-// base URL (a relative src would resolve against THIS page), and inlining keeps
-// scripts executing in document order, which a fetch-then-set rewrite would not.
-const TG_DROP=/cloudflareinsights|google-analytics|googletagmanager|doubleclick/i;
-async function _tgInline(html, base, log){
-  const re=/(<(?:script|link|img|source|audio|video)\b[^>]*?\b(?:src|href)\s*=\s*")([^"]+)(")/gi;
-  const jobs=[]; let m;
-  while((m=re.exec(html))){
-    const u=m[2];
-    if(/^(data:|blob:|javascript:|#|about:)/i.test(u)) continue;
-    jobs.push({raw:m[0],pre:m[1],url:u,post:m[3]});
-  }
-  const seen={};
-  await Promise.all(jobs.map(async j=>{
-    if(seen[j.url]!==undefined) return; seen[j.url]=null;
-    if(TG_DROP.test(j.url)){ seen[j.url]='data:text/javascript,'; return; }
-    try{ const o=await _tgPxBuf(_tgAbs(j.url,base));
-         seen[j.url]='data:'+(o.mime||'application/octet-stream')+';base64,'+_tgB64(o.buf); }
-    catch(e){ seen[j.url]='data:text/plain,'; }        // a missing asset ≠ dead launch
-  }));
-  jobs.forEach(j=>{ if(seen[j.url]) html=html.split(j.raw).join(j.pre+seen[j.url]+j.post); });
-  if(log) log('info','inlined '+Object.keys(seen).length+' static refs through the tunnel');
-  return html;
+  // featured first, then A-Z (the catalogue isn't ordered for display)
+  zengsGames.sort((a,b) => (b.featured?1:0)-(a.featured?1:0) || a.name.localeCompare(b.name));
+  console.log('[N3ptune] Zen GS loaded ('+zengsGames.length+' games from '+used+')');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2595,8 +2421,8 @@ function getUnified() {
     list.push(...luminsdkGames);
   if (activeSrcs.has('noah'))
     list.push(...noahGames);
-  if (activeSrcs.has('tglsc'))
-    list.push(...tglscGames);
+  if (activeSrcs.has('zengs'))
+    list.push(...zengsGames);
   return list;
 }
 
@@ -2688,8 +2514,6 @@ function _vsRenderBatch() {
       +`<div class="gsub"><span class="gsrc-dot ${g._src}"></span>${sub}</div></div>`
       +`<div class="play-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
     frag.appendChild(card);
-    // TGLSC covers live behind the tunnel, so they can't be a plain <img src>.
-    if (g._src==='tglsc' && !g.cover && g._cover) _tgQueueCover(g, card);
   }
   grid.appendChild(frag);
   _vsRendered = end;
@@ -2714,7 +2538,7 @@ function getAllGames() {
   list.push(...seraphGames);
   list.push(...luminsdkGames);
   list.push(...noahGames);
-  list.push(...tglscGames);
+  list.push(...zengsGames);
   return list;
 }
 
@@ -3004,11 +2828,11 @@ function doHomeSearch() {
 
 function setSource(src) {
   // Legacy: set all or single
-  if(src==='all'){activeSrcs=new Set(['gn','ugs','seraph','luminsdk','noah','tglsc']);}
+  if(src==='all'){activeSrcs=new Set(['gn','ugs','seraph','luminsdk','noah','zengs']);}
   else{activeSrcs=new Set([src]);}
   activeSrc=src;
   updateSrcFilterBtns();
-  ['all','gn','ugs','seraph','luminsdk','noah','tglsc'].forEach(s=>{
+  ['all','gn','ugs','seraph','luminsdk','noah','zengs'].forEach(s=>{
     const p=document.getElementById('pill-'+s);
     if(p){p.classList.toggle('active',s===src);}
   });
@@ -3033,7 +2857,7 @@ function toggleSrc(src) {
 }
 
 function updateSrcFilterBtns(){
-  ['gn','ugs','seraph','luminsdk','noah','tglsc'].forEach(s=>{
+  ['gn','ugs','seraph','luminsdk','noah','zengs'].forEach(s=>{
     const b=document.getElementById('sfbtn-'+s);
     if(b) b.classList.toggle('on', activeSrcs.has(s));
   });
@@ -4108,39 +3932,31 @@ async function launch(key) {
     }
     return;
   }
-  // ── TGLSC: a hosted page on glseries.net reached only through the WISP tunnel.
-  // Fetch the shell, inline its static refs as data: URLs, and inject the shim
-  // that routes everything the game asks for at runtime back through us.
-  // NOTE: never inject a <base> here — a real base would make relative URLs load
-  // DIRECTLY from glseries.net, defeating the whole point of the tunnel.
-  if (g._src === 'tglsc') {
+  // ── Zen GS: a hosted game on a *.cloudfront.net host behind its play URL.
+  // Genuinely cross-origin, so (exactly like LuminSDK) we can't fetch-and-patch
+  // it — point the frame straight at it. None of our in-frame shims apply, which
+  // also means the on-screen touch pads can't deliver keys into it — logged so a
+  // failure isn't a mystery.
+  if (g._src === 'zengs') {
     document.getElementById('newTabBtn').style.display='none';
     try {
-      if (!_tgSession) { glog('info','connecting the TGLSC tunnel…'); await _tgConnect(); }
-      glog('info', 'loader: TGLSC (WISP tunnel via '+_tgWisp+')');
-      const base = g.url.replace(/[^/]*$/, '');
-      const r = await _tgPx(g.url);
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      let html = await r.text();
-      glog('ok', 'shell fetched through the tunnel ('+html.length+' bytes)');
-      html = await _tgInline(html, base, glog);
-      const inj = _gameLogShim(g.name) + _tgShimSrc(base) + _ytgameStub() + _kongregateStub() + _unityFitShim() + __touchKeys() +
-        '<meta name="viewport" content="width=device-width,initial-scale=1">' +
-        '<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}' +
-        'ruffle-player,ruffle-embed,ruffle-object{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important}</style>';
-      html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + inj) : inj + html;
+      if (!g.url) throw new Error('Zen GS returned no URL');
+      // Re-pick a host that's live NOW and swap it into the play URL — the host
+      // chosen at load can start returning CloudFront 504s, and the iframe can't
+      // detect that. All hosts serve identical paths, so this just works.
+      const host = await _zgHealthyHost();
+      const url = host ? g.url.replace(/^https?:\/\/[^/]+/, 'https://' + host) : g.url;
+      glog('info', 'loader: Zen GS (hosted, cross-origin) — host '+(host||'(none healthy)'));
+      glog('info', 'url: ' + String(url).slice(0, 90) + '…');
       frame.onload = () => { frame.onload = null; glog('ok','iframe onload — game frame ready');
                              _handOffKeyboard(frame);
                              setTimeout(()=>document.getElementById('pload').classList.add('gone'), 300); };
-      frame.removeAttribute('src');
-      frame.srcdoc = html;
-      setTimeout(()=>document.getElementById('pload').classList.add('gone'), 9000);
+      frame.removeAttribute('srcdoc');
+      frame.src = url;
+      setTimeout(()=>document.getElementById('pload').classList.add('gone'), 8000);
     } catch(e){
-      glog('error', 'TGLSC could not load this game: ' + (e && e.message ? e.message : e));
-      document.getElementById('ltxt').textContent =
-        'TGLSC is unreachable right now — the site or every proxy relay is down.';
-      document.getElementById('showAnywayBtn').style.display='none';
-      clearTimeout(window._showAnywayTimer);
+      glog('error', 'Zen GS could not load this game: ' + (e && e.message ? e.message : e));
+      document.getElementById('ltxt').textContent = 'Zen GS could not load this game.';
     }
     return;
   }
@@ -5142,6 +4958,7 @@ function loadData() {
 const CLOUDMOON_PORTAL = 'portal-260909.html';
 const CLOUDMOON_BASE = 'https://cdn.jsdelivr.net/gh/CloudMoonApp/web@main/';
 let _cloudLoaded = false, _cloudLoading = false, _cloudPortalHtml = null, _cloudWired = false;
+let _cloudSid = null;   // last launched CloudMoon sid, for "Play again" after a session end
 
 // Back out of a running stream to the catalog. The player document.write's itself into
 // the cloud iframe and then navigates cross-origin to the stream host, so the player's
@@ -5152,13 +4969,66 @@ function _cloudBack(){
   if (f && _cloudPortalHtml) f.srcdoc = _cloudPortalHtml;
   const b = document.getElementById('cloud-back'); if (b) b.style.display = 'none';
 }
+// Dismiss the session-end notice without leaving the catalog.
+function _cloudNoticeHide(){
+  const n = document.getElementById('cloud-notice'); if (n) n.remove();
+}
+// Start the last game again. The portal is re-mounted by _cloudBack(); the resume key is
+// picked up by the boot check inside playFix, which replays the same sid.
+function _cloudReplay(){
+  try { if (_cloudSid) localStorage.setItem('n3_cm_resume', _cloudSid); } catch(e){}
+  _cloudNoticeHide(); _cloudBack();
+}
+// CloudMoon's free tier hands out a fixed amount of play time per account: its own API
+// reports it as time_left (shown in the portal header) and its streaming server ends the
+// session by pushing a socket "kickout" / "no_time". That cap is enforced server side, so
+// nothing here can raise it. What IS ours is the landing. Every session-end dialog in the
+// player does location.href = "./main.svg", which in our embed resolves against the
+// injected jsDelivr <base> and dumps the user on CloudMoon's own unskinned launcher. The
+// player posts {__n3cloud:"ended"} instead (see the Swal wrap in skin()) and we come back
+// to N3ptune's catalog with a plain explanation and a one-click replay.
+function _cloudEnded(d){
+  d = d || {};
+  _cloudBack(); _cloudNoticeHide();
+  const wrap = document.getElementById('cloud-wrap'); if (!wrap) return;
+  const quota = /no_time|free game time/i.test(String(d.kind || '') + ' ' + String(d.text || ''));
+  const body = quota
+    ? 'Your CloudMoon play time for today is used up. Free accounts get a set amount of streaming time per day, '
+      + 'and that allowance is tracked on CloudMoon’s own servers, so N3ptune cannot extend it. It refills on '
+      + 'their daily reset, and a paid CloudMoon plan lifts the cap.'
+    : 'The stream ended. CloudMoon closes a session once your play time runs out, and also after a stretch with no '
+      + 'input. If you still have time left on your account you can start the game straight back up.';
+  const el = document.createElement('div');
+  el.id = 'cloud-notice';
+  el.style.cssText = 'position:absolute;inset:0;z-index:70;display:grid;place-items:center;padding:20px;'
+    + 'background:rgba(5,13,26,.86);backdrop-filter:blur(6px);font-family:Fredoka,sans-serif';
+  el.innerHTML = '<div style="max-width:440px;background:#071120;border:1px solid rgba(96,165,250,.18);border-radius:18px;'
+    + 'padding:26px 24px;color:#e8f4ff;box-shadow:0 24px 60px rgba(0,0,0,.55)">'
+    + '<h3 style="margin:0 0 10px;font-size:19px;font-weight:700">' + (quota ? 'Out of play time for today' : 'Session ended') + '</h3>'
+    + '<p style="margin:0 0 20px;font-size:13.5px;line-height:1.6;color:#6b9ab8">' + body + '</p>'
+    + '<div style="display:flex;gap:10px">'
+    + '<button onclick="_cloudReplay()" style="flex:1;height:42px;background:' + (quota ? 'transparent' : '#2563eb') + ';'
+    + 'border:' + (quota ? '1.5px solid #2563eb' : 'none') + ';color:' + (quota ? '#60a5fa' : '#fff') + ';'
+    + 'font:700 13px Fredoka,sans-serif;border-radius:12px;cursor:pointer">Play again</button>'
+    + '<button onclick="_cloudNoticeHide()" style="flex:1;height:42px;background:' + (quota ? '#2563eb' : 'transparent') + ';'
+    + 'border:' + (quota ? 'none' : '1.5px solid rgba(96,165,250,.3)') + ';color:' + (quota ? '#fff' : '#e8f4ff') + ';'
+    + 'font:700 13px Fredoka,sans-serif;border-radius:12px;cursor:pointer">Back to games</button>'
+    + '</div></div>';
+  wrap.appendChild(el);
+}
 // The player posts {__n3cloud:"play"} from our origin just before it hands off, so we
-// reveal the Back button for the whole session.
+// reveal the Back button for the whole session, and {__n3cloud:"ended"} when CloudMoon
+// closes the session (time used up, idle timeout, or a failed join).
 function _cloudWire(){
   if (_cloudWired) return; _cloudWired = true;
   window.addEventListener('message', function(e){
-    if (e && e.data && e.data.__n3cloud === 'play'){
+    const d = e && e.data; if (!d || !d.__n3cloud) return;
+    if (d.__n3cloud === 'play'){
+      if (d.sid) _cloudSid = d.sid;
       const b = document.getElementById('cloud-back'); if (b) b.style.display = 'inline-flex';
+      _cloudNoticeHide();
+    } else if (d.__n3cloud === 'ended'){
+      _cloudEnded(d);
     }
   });
 }
@@ -5239,6 +5109,20 @@ var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);
   html = html.split('139, 92, 246').join('37, 99, 235');
   html = html.split('#1e2831').join('#050d1a');
   html = html.split('#2d3748').join('#0a1828');
+  // UNLIMITED TIME. CloudMoon's free tier is "Unlimited time, with ads"; its web app
+  // sends ad_unblock = !adBlockDetected on /phone/connect, and when that is false the
+  // server drops the account to a reduced allowance ("Unlimited time is not available
+  // because AdBlock is enabled", "Your free time is reduced because AdBlock is enabled"
+  // in their own i18n). THIS jsDelivr portal build hardcodes 'ad_unblock':![] (false) in
+  // both connect calls, so our embed was permanently treated as ad-blocked: that, not a
+  // server policy, is the ~30 minute cap users hit here while their normal CloudMoon runs
+  // unlimited. Send what a browser with no adblocker sends. Plaintext in the portal (not
+  // in the obfuscator string array), so a literal swap reaches it; logged if CloudMoon
+  // changes the shape, since the cap would quietly come back.
+  const adHits = html.split("'ad_unblock':![]").length - 1;
+  if (adHits) html = html.split("'ad_unblock':![]").join("'ad_unblock':!![]");
+  else console.warn('[N3ptune] Cloud gaming: ad_unblock flag not found in this CloudMoon build; play time may be capped');
+
   // Fix CloudMoon's own search-placeholder typo.
   html = html.split('Discovery your next game').join('Discover your next game');
   // Match N3ptune's Fredoka font + grid backdrop, AND override the purples that the
@@ -5280,10 +5164,38 @@ var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);
   // origin → cm_launch_data is readable), exactly as play-260909.svg would, minus
   // the origin change. The player's assets are absolute jsDelivr; only two images
   // are relative, so we give the player doc a <base> on the CDN.
+
+  // Every session-end dialog in the player finishes with location.href = "./main.svg",
+  // which is relative, so in our embed it resolves against the injected jsDelivr <base>
+  // and drops the user on CloudMoon's own unskinned launcher. CloudMoon ends a session
+  // when the account's time_left runs out (its server pushes "kickout"/"no_time", which
+  // is also what the ~30 minute free cap is), when the data channel closes, after an
+  // idle period, or when a join fails. Intercept at the dialog: sweetalert2's fire() is
+  // wrapped so those three titles never open and never reach their navigation callback,
+  // and the parent is told instead (_cloudEnded). Matched on title, so a miss just falls
+  // back to the old behaviour. Every other dialog (quality toast, key layout, safety
+  // notice) passes straight through.
+  const SESSION_END_BODY = `(function(){
+var dead={then:function(){return dead},catch:function(){return dead},finally:function(){return dead}};
+function post(kind,text){try{parent.postMessage({__n3cloud:"ended",kind:kind,text:text,sid:localStorage.getItem("n3_cm_sid")||null},"*");}catch(e){}}
+function wrap(o){
+  if(!o||o.__n3w||typeof o.fire!=="function")return;
+  var f=o.fire;
+  o.fire=function(op){
+    try{
+      var t=String((op&&op.title)||""),x=String((op&&op.text)||"");
+      if(/Session Ended|Session Expired|Unable to Join/i.test(t)){post(/free game time/i.test(x)?"no_time":"ended",x);return dead;}
+    }catch(e){}
+    return f.apply(o,arguments);
+  };
+  o.__n3w=1;
+}
+var n=0,iv=setInterval(function(){wrap(window.Swal);wrap(window.swal);wrap(window.sweetAlert);if(++n>600||(window.Swal&&window.Swal.__n3w))clearInterval(iv);},50);
+})();`;
   const playerUrl = cdnUrl(CLOUDMOON_BASE + CLOUDMOON_PORTAL.replace('portal-', 'play-')) + '?t=' + Date.now();
   const playerBase = cdnUrl(CLOUDMOON_BASE);
   const playFix = '\n<script>(function(){'
-    + 'var PU=' + JSON.stringify(playerUrl) + ',PB=' + JSON.stringify(playerBase) + ',H=' + JSON.stringify(H) + ',SI=' + JSON.stringify(JSD_SHIM) + ';'
+    + 'var PU=' + JSON.stringify(playerUrl) + ',PB=' + JSON.stringify(playerBase) + ',H=' + JSON.stringify(H) + ',SI=' + JSON.stringify(JSD_SHIM) + ',SEB=' + JSON.stringify(SESSION_END_BODY) + ';'
     + 'function skin(h){'
     +   'h=h.replace(/https?:\\/\\/[a-z0-9.-]*\\.jsdelivr\\.net/gi,"https://"+H);'
     +   'h=h.replace("<title>CloudMoon - Play</title>","<title>N3ptune \\u2014 Play</title>");'
@@ -5292,18 +5204,24 @@ var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);
     +   'for(var ci=0;ci<CM.length;ci++)h=h.replace(new RegExp("#"+CM[ci][0],"gi"),"#"+CM[ci][1]);'
     +   'h=h.split("./run-site/images/favicon.png").join("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%2360a5fa%27%3E%3Cpath d=%27M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z%27/%3E%3C/svg%3E");'
     +   'var SH="<scr"+"ipt>(function(){"+SI+"})();</scr"+"ipt>";'
-    +   'return h.replace("<head>","<head>"+SH+\'<base href="\'+PB+\'">\');'
+    +   'var SE="<scr"+"ipt>"+SEB+"</scr"+"ipt>";'
+    +   'return h.replace("<head>","<head>"+SH+SE+\'<base href="\'+PB+\'">\');'
     + '}'
-    + 'function play(){'
-    +   'try{parent.postMessage({__n3cloud:"play"},"*");}catch(e){}'
+    + 'function play(sid){'
+    +   'try{localStorage.setItem("n3_cm_sid",sid||"");}catch(e){}'
+    +   'try{parent.postMessage({__n3cloud:"play",sid:sid||null},"*");}catch(e){}'
     +   'fetch(PU,{cache:"no-store"}).then(function(r){return r.text();}).then(function(h){'
     +     'document.open();document.write(skin(h));document.close();'
     +   '}).catch(function(){document.documentElement.innerHTML="<body style=\\"margin:0;background:#050d1a;color:#e8f4ff;font:16px Fredoka,sans-serif;display:grid;place-items:center;height:100vh\\">Could not start the stream. Please try again.</body>";});'
     + '}'
+    + 'function go(sid){try{localStorage.setItem("cm_launch_data",JSON.stringify({sid:sid,quality:"SD",timestamp:Date.now()}));}catch(e){}play(sid);}'
+    + 'window.__n3play=go;'
+    // "Play again" after a session end: the parent re-mounts this portal with the sid
+    // parked in localStorage (same origin), so replay it instead of waiting for a click.
+    + 'try{var rs=localStorage.getItem("n3_cm_resume");if(rs){localStorage.removeItem("n3_cm_resume");setTimeout(function(){go(rs);},60);}}catch(e){}'
     + 'function hook(){'
-    +   'if(window.App&&typeof window.App.launchGameAction==="function"){'
-    +     'window.App.launchGameAction=function(sid){try{localStorage.setItem("cm_launch_data",JSON.stringify({sid:sid,quality:"SD",timestamp:Date.now()}));}catch(e){}play();};'
-    +   '}else{setTimeout(hook,120);}'
+    +   'if(window.App&&typeof window.App.launchGameAction==="function"){window.App.launchGameAction=go;}'
+    +   'else{setTimeout(hook,120);}'
     + '}hook();'
     + '})();<\/script>\n';
   html = html.replace('</body>', playFix + '</body>');
@@ -5885,11 +5803,6 @@ function loadWallpaperPreview() {
 })();
 </script>
 
-<!-- TGLSC transport: libcurl.js drives the WISP tunnel (script from jsDelivr).
-     Loaded lazily-ish at the end of the body so it never blocks first paint;
-     loadTglsc() waits for it via _tgWaitLc(). -->
-<script src="https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl_full.js"
-        onload="window._lcReady=1" onerror="window._lcErr=1"></script>
 
 <!-- LuminSDK — fourth game source. NO static <script> tag here on purpose: a
      hardcoded cdn.jsdelivr.net tag left the source dead on networks that block
