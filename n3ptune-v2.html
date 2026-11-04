@@ -4959,6 +4959,7 @@ const CLOUDMOON_PORTAL = 'portal-260909.html';
 const CLOUDMOON_BASE = 'https://cdn.jsdelivr.net/gh/CloudMoonApp/web@main/';
 let _cloudLoaded = false, _cloudLoading = false, _cloudPortalHtml = null, _cloudWired = false;
 let _cloudSid = null;   // last launched CloudMoon sid, for "Play again" after a session end
+let _cloudPlayStart = 0;   // ms timestamp of the last launch, so _cloudEnded can report the length
 
 // Back out of a running stream to the catalog. The player document.write's itself into
 // the cloud iframe and then navigates cross-origin to the stream host, so the player's
@@ -4989,15 +4990,21 @@ function _cloudReplay(){
 // to N3ptune's catalog with a plain explanation and a one-click replay.
 function _cloudEnded(d){
   d = d || {};
+  const mins = _cloudPlayStart ? Math.round((Date.now() - _cloudPlayStart) / 60000) : null;
+  console.log('[N3ptune] Cloud session ended after '
+    + (mins === null ? 'an unknown time' : mins + ' min')
+    + ' — kind: ' + (d.kind || '?') + ' — CloudMoon said: ' + JSON.stringify(d.text || ''));
+  _cloudPlayStart = 0;
   _cloudBack(); _cloudNoticeHide();
   const wrap = document.getElementById('cloud-wrap'); if (!wrap) return;
   const quota = /no_time|free game time/i.test(String(d.kind || '') + ' ' + String(d.text || ''));
+  const ran = mins === null ? '' : ' It ran for about ' + mins + ' minutes.';
   const body = quota
     ? 'Your CloudMoon play time for today is used up. Free accounts get a set amount of streaming time per day, '
       + 'and that allowance is tracked on CloudMoon’s own servers, so N3ptune cannot extend it. It refills on '
-      + 'their daily reset, and a paid CloudMoon plan lifts the cap.'
+      + 'their daily reset, and a paid CloudMoon plan lifts the cap.' + ran
     : 'The stream ended. CloudMoon closes a session once your play time runs out, and also after a stretch with no '
-      + 'input. If you still have time left on your account you can start the game straight back up.';
+      + 'input. If you still have time left on your account you can start the game straight back up.' + ran;
   const el = document.createElement('div');
   el.id = 'cloud-notice';
   el.style.cssText = 'position:absolute;inset:0;z-index:70;display:grid;place-items:center;padding:20px;'
@@ -5025,6 +5032,9 @@ function _cloudWire(){
     const d = e && e.data; if (!d || !d.__n3cloud) return;
     if (d.__n3cloud === 'play'){
       if (d.sid) _cloudSid = d.sid;
+      _cloudPlayStart = Date.now();
+      console.log('[N3ptune] Cloud session started at ' + new Date().toLocaleTimeString()
+        + ' — if it ends on its own, the notice will say how long it ran.');
       const b = document.getElementById('cloud-back'); if (b) b.style.display = 'inline-flex';
       _cloudNoticeHide();
     } else if (d.__n3cloud === 'ended'){
@@ -5084,6 +5094,40 @@ function ensure(){
 var booted=false;function boot(){if(booted)return;booted=true;ensure();try{new MutationObserver(ensure).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}setInterval(ensure,1500);}
 var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);if(document.body)boot();
 })();<\/script>`;
+  // CloudMoon's own app does NOT gate play on time_left when the account is in an
+  // unlimited locale and is not on a proxy. Its real check is
+  //     (!isUnlimitLocale || useProxy) && time_left_sec <= 0   ->  block
+  // and in exactly that state its navbar drops the countdown and shows "Unlimited time".
+  // THIS portal build has neither half: it always prints the raw time_left string
+  // ("0H 30M"), and it blocks on a literal `this.timeLeft === "0h 0m"` - which only fails
+  // to fire today because CloudMoon returns the string uppercase. Port their rule, so the
+  // header means something and an unlimited account can never be falsely blocked by a
+  // casing change. The raw value still goes to the console on every poll.
+  const UNLIMIT_HEAD = `<script>(function(){
+function apply(A){
+  try{
+    Object.defineProperty(A,"timeLeft",{configurable:true,
+      get:function(){return "Unlimited";},
+      set:function(v){try{console.log("[N3ptune] CloudMoon time_left =",v);}catch(e){}}});
+  }catch(e){return;}
+  try{A.renderUserArea&&A.renderUserArea();}catch(e){}
+  try{console.log("[N3ptune] Unlimited locale: time gate disabled, matching CloudMoon's own rule.");}catch(e){}
+}
+function boot(){
+  var A=window.App;
+  if(!A||typeof A.customFetch!=="function"){setTimeout(boot,200);return;}
+  var t=null;try{t=localStorage.getItem("cm_auth_token");}catch(e){}
+  if(!t){setTimeout(boot,1500);return;}
+  A.customFetch("/phone/list").then(function(r){
+    var d=(r&&r.data&&r.data.list&&r.data.list[0])||null;
+    if(!d){setTimeout(boot,5000);return;}
+    try{console.log("[N3ptune] CloudMoon account: unlimited_locale="+d.is_unlimit_locale
+      +" proxy="+d.use_proxy+" time_left="+d.time_left+" sec="+d.time_left_sec);}catch(e){}
+    if(d.is_unlimit_locale&&!d.use_proxy)apply(A);
+  }).catch(function(){setTimeout(boot,5000);});
+}
+boot();
+})();<\/script>`;
   // CloudMoon's handlePlay does alert("Fail: "+resp.message) when its /phone/connect
   // launch API rejects a stream, and that message comes back BLANK — so a user who
   // can't get a server just sees a cryptic "Fail:" with nothing after it (NOT a CDN /
@@ -5093,11 +5137,12 @@ var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);
   const ALERT_FIX = '<script>(function(){'
     + 'var _al=window.alert;'
     + 'window.alert=function(m){try{var s=String(m==null?"":m);'
+    +   'try{console.warn("[N3ptune] CloudMoon alert (original):",s);}catch(e){}'
     +   'if(/^Fail:\\s*(undefined)?\\s*$/i.test(s)){return _al("Couldn\\u2019t start the stream right now. CloudMoon\\u2019s game servers may be busy, or your session needs a refresh. Make sure you are signed in and still have play time left, then try again in a moment.");}'
     +   'if(/^Fail:\\s*/i.test(s)){return _al("Couldn\\u2019t start the stream: "+s.replace(/^Fail:\\s*/i,"")+". CloudMoon\\u2019s servers may be busy, so try again in a moment.");}'
     + '}catch(e){}return _al.apply(this,arguments);};'
     + '})();<\/script>';
-  html = html.replace('<head>', '<head><script>(function(){' + JSD_SHIM + '})();<\/script>' + ALERT_FIX + SIGNUP_HEAD);
+  html = html.replace('<head>', '<head><script>(function(){' + JSD_SHIM + '})();<\/script>' + ALERT_FIX + UNLIMIT_HEAD + SIGNUP_HEAD);
   // Brand → N3ptune
   html = html.replace('<title>CloudMoon</title>', '<title>N3ptune Cloud</title>');
   html = html.replace(/<img src="https:\/\/cloudmoonapp\.com\/favicon\.ico"[^>]*>/,
