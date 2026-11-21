@@ -4,9 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>N3ptune</title>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+// ── LOCAL MODE EARLY LOCK ──────────────────────────────────────
+// Runs before ANY other script or stylesheet, because the things that break Local
+// Mode's "no requests" promise all happen early: this webfont, the @import that used
+// to sit in the first <style>, the gate's _keyFetch (captured before the app patches
+// fetch) and the bare resolveCdn() at the top of the app script. Measured before this
+// existed: 28 external requests still escaped in Local Mode.
+(function(){
+  var on=false; try{ on = localStorage.getItem('n3_local_mode')==='1'; }catch(e){}
+  window.__n3Local = on;
+  if(!on){   // online: load the webfont exactly as the old static <link> did
+    try{ var l=document.createElement('link'); l.rel='stylesheet'; l.href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap";
+         document.head.appendChild(l); }catch(e){}
+    return;
+  }
+  var no=function(w){ var e=new Error('N3ptune Local Mode: '+w+' blocked (offline by choice)'); e.name='LocalModeBlocked'; return e; };
+  try{ window.fetch=function(){ return Promise.reject(no('fetch')); }; }catch(e){}
+  try{ XMLHttpRequest.prototype.open=function(){ throw no('XMLHttpRequest'); };
+       XMLHttpRequest.prototype.send=function(){ throw no('XMLHttpRequest'); }; }catch(e){}
+  try{ navigator.sendBeacon=function(){ return false; }; }catch(e){}
+  try{ window.WebSocket=function(){ throw no('WebSocket'); }; }catch(e){}
+  try{ window.EventSource=function(){ throw no('EventSource'); }; }catch(e){}
+  window.__n3LocalLocked = true;
+})();
+</script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+/* The Fredoka webfont is injected by the early-lock script above so Local Mode can
+   skip it. An @import here would fire before any JS runs. */
 :root {
   --bg: #050d1a;
   --panel: #071120;
@@ -23,6 +48,7 @@
   --c-luminsdk: #3b82f6;
   --c-noah: #10b981;
   --c-zengs: #f97316;
+  --c-misc: #14b8a6;
   --sidebar-w: 56px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -338,6 +364,8 @@ body{
 .cloud-page{overflow:hidden;padding:0}
 .cloud-wrap{position:absolute;inset:0;background:var(--bg)}
 #cloudFrame{position:absolute;inset:0;width:100%;height:100%;border:none;display:block;background:var(--bg)}
+.ad-slot{margin:26px auto 0;max-width:760px;min-height:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.ad-slot .ad-slot-tag{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);opacity:.6}
 .cloud-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted2);text-align:center;padding:24px}
 .cloud-state .spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin 1s linear infinite}
 .cloud-state .cloud-retry{margin-top:4px;background:var(--accent);color:#fff;border:none;padding:9px 18px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}
@@ -497,7 +525,7 @@ body{
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{font-size:13.8px;color:var(--muted2)}
 .lsrc{font-size:10.9px;margin-top:-4px;font-weight:700;letter-spacing:.08em}
-.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}.lsrc.luminsdk{color:#93c5fd}.lsrc.noah{color:#6ee7b7}.lsrc.zengs{color:#fdba74}
+.lsrc.gn{color:#fc8099}.lsrc.ugs{color:#fcd34d}.lsrc.seraph{color:#d8b4fe}.lsrc.luminsdk{color:#93c5fd}.lsrc.noah{color:#6ee7b7}.lsrc.zengs{color:#fdba74}.lsrc.misc{color:#5eead4}
 
 /* ═══ TOUCH CONTROLS (mobile mode) ═══
    The layer sits ABOVE the game iframe in the parent document; only the pads
@@ -689,10 +717,11 @@ body{
 .src-filter-btn.on.sf-luminsdk{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.35);color:#93c5fd}
 .src-filter-btn.on.sf-noah{background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.35);color:#6ee7b7}
 .src-filter-btn.on.sf-zengs{background:rgba(249,115,22,.16);border-color:rgba(249,115,22,.4);color:#fdba74}
+.src-filter-btn.on.sf-misc{background:rgba(20,184,166,.16);border-color:rgba(20,184,166,.4);color:#5eead4}
 .sf-dot.gn{background:var(--c-gn)}
 .sf-dot.ugs{background:var(--c-ugs)}
 .sf-dot.seraph{background:var(--c-seraph)}
-.sf-dot.luminsdk{background:var(--c-luminsdk)}.sf-dot.noah{background:var(--c-noah)}.sf-dot.zengs{background:var(--c-zengs)}
+.sf-dot.luminsdk{background:var(--c-luminsdk)}.sf-dot.noah{background:var(--c-noah)}.sf-dot.zengs{background:var(--c-zengs)}.sf-dot.misc{background:var(--c-misc)}
 
 /* ═══ v2 HOME REDESIGN ═══ */
 .home-page{
@@ -990,6 +1019,9 @@ body{font-weight:600}
   })();
 
   async function fetchGitHubKeys() {
+    // Local Mode: no key-server call at all. null is exactly what "every mirror was
+    // unreachable" looks like, which routes submitKey() to its offline path.
+    try { if (localStorage.getItem('n3_local_mode') === '1') return null; } catch(e){}
     // jsDelivr first (fast, the normal case); the extra non-jsdelivr.net mirrors
     // (Mirror 1…N — kept in sync with EXTRA_MIRRORS in the CDN script, which this gate
     // script can't see) are only queried if every jsDelivr mirror is unreachable, so a
@@ -1054,10 +1086,17 @@ body{font-weight:600}
     }
   }
 
-  // Check every 60 seconds
-  setInterval(recheckKey, 60000);
-  // Also check immediately on load if already unlocked
-  if(sessionStorage.getItem('n3_unlocked') === '1') recheckKey();
+  // Check every 60 seconds - but never in Local Mode, where this would be an outbound
+  // request every minute and would defeat the whole point of the feature.
+  let _localFlag = false;
+  try { _localFlag = localStorage.getItem('n3_local_mode') === '1'; } catch(e){}
+  if (!_localFlag) {
+    setInterval(recheckKey, 60000);
+    // Also check immediately on load if already unlocked
+    if(sessionStorage.getItem('n3_unlocked') === '1') recheckKey();
+  } else {
+    console.log('[N3ptune] Local Mode: key recheck disabled (it would phone home every minute).');
+  }
 
   // Centered in-page popup (nicer than a native alert; dismiss with OK / Esc / Enter / backdrop)
   function showCenterPopup(text){
@@ -1100,7 +1139,35 @@ body{font-weight:600}
     // code did `Object.keys(null)`, which threw, left validKeys empty and showed
     // "Invalid key" on a network failure). Tell the user, and don't burn a rate-limit.
     if (ghKeys === null) {
-      showMsg('⚠️ Couldn\'t reach the key server — check your connection and try again.', '#fcd34d');
+      // OFFLINE PATH. Without this, Local Mode is unusable: with no network the gate can
+      // never verify anything, so it refused every key and nobody could reach their saved
+      // games. Two things are still checkable with no connection: the keys baked into
+      // this file, and the last key the server DID accept (remembered on success below).
+      // A key revoked since that last success will still open the gate offline. That is
+      // accepted on purpose: offline there is nothing to check against, and everything
+      // reachable in that state is already on this device.
+      let lastGood = '';
+      try { lastGood = (localStorage.getItem('n3_lastkey') || '').toUpperCase(); } catch(e){}
+      if (validKeys.has(key) || (lastGood && key === lastGood)) {
+        showMsg('✅ Offline - verified on this device.', '#4ade80');
+        sessionStorage.setItem('n3_unlocked', '1');
+        sessionStorage.setItem('n3_key', key);
+        const gate = document.getElementById('keyGate');
+        gate.style.transition = 'opacity 0.5s';
+        gate.style.opacity = '0';
+        setTimeout(()=>{ gate.style.display='none'; }, 500);
+        return;
+      }
+      // Offline and the key is not verifiable on this device. Say what would actually
+      // fix it rather than just "check your connection": in Local Mode the only keys
+      // that work are the ones baked into this file and the last key the server
+      // accepted here, which is remembered on a successful online unlock.
+      var _lm = false; try { _lm = localStorage.getItem('n3_local_mode') === '1'; } catch(e){}
+      if (_lm) {
+        showMsg('⚠️ Offline. Use the key you last signed in with on this device, or turn Local Mode off while you have a connection.', '#fcd34d');
+      } else {
+        showMsg('⚠️ Couldn\'t reach the key server — check your connection and try again.', '#fcd34d');
+      }
       return;
     }
     // Support both array ["KEY1","KEY2"] and object {"KEY1":...} formats
@@ -1117,6 +1184,7 @@ body{font-weight:600}
     showCenterPopup(`Hey everyone! My name is Isaiah, I go to Atlanta Public Schools, and I'm officially the new owner of N3ptune. The old owner trusted me with this, so I will try as hard as possible to keep this website amazing. If you have questions/comments/concerns/want a new link, email me at <a href="mailto:yoyoygroff@gmail.com" style="color:#60a5fa;text-decoration:underline">yoyoygroff@gmail.com</a>.<br><br>PS: If you want an unblockable link, go to <a href="https://p.kll.li/?a0a6db0332483255#2hGYX38jqjqQwijSq5uxS1g7Tt6C9MdZc5G3NLXqNfhj" target="_blank" rel="noreferrer" style="color:#60a5fa;text-decoration:underline;word-break:break-all">https://p.kll.li/?a0a6db0332483255#2hGYX38jqjqQwijSq5uxS1g7Tt6C9MdZc5G3NLXqNfhj</a> for the tutorial`);
     sessionStorage.setItem('n3_unlocked', '1');
     sessionStorage.setItem('n3_key', key);
+    try { localStorage.setItem('n3_lastkey', key); } catch(e){}   // for the offline path
     setTimeout(()=>{
       const gate = document.getElementById('keyGate');
       gate.style.transition = 'opacity 0.5s';
@@ -1291,6 +1359,8 @@ body{font-weight:600}
       <span id="foot-count">&#8212; games</span>
     </div>
 
+    <div class="ad-slot" id="ad-slot" style="display:none"></div>
+
     <p class="home-note">N3ptune v2 is still in beta, and a lot of games don&#39;t work. We apologize in advance, as a lot of your favorite games might not work. To help, please send the broken game&#39;s logs to the google form in the top left of your game. We appreciate your support by using and contributing to N3ptune v2.</p>
   </div>
 
@@ -1322,6 +1392,9 @@ body{font-weight:600}
         <button class="src-filter-btn sf-zengs on" id="sfbtn-zengs" onclick="toggleSrc('zengs')">
           <span class="sf-dot zengs"></span>Zen GS
         </button>
+        <button class="src-filter-btn sf-misc on" id="sfbtn-misc" onclick="toggleSrc('misc')">
+          <span class="sf-dot misc"></span>Miscellaneous
+        </button>
       </div>
     </div>
     <div class="games-content" id="games-content">
@@ -1347,6 +1420,37 @@ body{font-weight:600}
         <div>
           <div class="settings-title">Settings</div>
           <div class="settings-sub">Customize your N3ptune experience</div>
+        </div>
+      </div>
+
+      <!-- LOCAL MODE -->
+      <div class="s-section">
+        <div class="s-section-title"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H5V5h14v14z"/></svg>Local Mode</div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Local Mode</div>
+            <div class="s-desc" id="localDesc">Play saved games with the network switched off. Nothing is requested from the internet.</div>
+          </div>
+          <button class="s-btn" id="localToggle" onclick="setLocalMode(!localOn())">Loading…</button>
+        </div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Saved games</div>
+            <div class="s-desc" id="localStats">Checking…</div>
+          </div>
+          <button class="s-btn ghost" onclick="clearLocalGames()">Clear all</button>
+        </div>
+      </div>
+
+      <!-- ADS (your own) -->
+      <div class="s-section">
+        <div class="s-section-title"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v14H3V5zm2 2v10h14V7H5z"/></svg>Ads</div>
+        <div class="s-row">
+          <div>
+            <div class="s-label">Show my ads</div>
+            <div class="s-desc" id="adsDesc">Runs your ad code on the home page only, never inside a game frame</div>
+          </div>
+          <button class="s-btn" id="adsToggle" onclick="setAds(!adsOn())">Loading…</button>
         </div>
       </div>
 
@@ -1493,9 +1597,10 @@ body{font-weight:600}
     <div class="cl-sub">What&#39;s new in N3ptune.</div>
 
     <div class="cl-entry">
-      <div class="cl-ver"><span class="cl-tag">v2.3.2</span><span class="cl-date">Nov 2026</span></div>
+      <div class="cl-ver"><span class="cl-tag">v2.6</span><span class="cl-date">Nov 2026</span></div>
       <ul>
-        <li>Fixed time limit on cloud gaming being 30 min, its now unlimited</li>
+        <li>Added local/offline mode!</li>
+        <li>Made multiple quality of life improvements, and around 2.5k new games</li>
       </ul>
     </div>
   </div>
@@ -1534,6 +1639,7 @@ body{font-weight:600}
       <span class="ptip-x" onclick="document.getElementById('ptip').style.display='none'" title="Dismiss">×</span>
     </div>
     <div class="pacts">
+      <button class="pbtn" id="saveOfflineBtn" onclick="toggleSaveOffline()" title="Save this game to play with the network off">Save offline</button>
       <button class="pbtn" onclick="reloadGame()"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> Reload</button>
       <button class="pbtn" id="newTabBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg> New Tab</button>
       <button class="pbtn pri" onclick="fsGame()"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> Fullscreen</button>
@@ -1691,6 +1797,9 @@ async function _pingMirror(mirror) {
 let _cdnZonesText = null;
 
 async function resolveCdn() {
+  // Local Mode never ranks mirrors: that is a burst of outbound pings plus zones.json,
+  // and resolveCdn() is called bare at module top level, long before loadAll().
+  if (localOn()) return _cdnHost;
   if (_cdnResolved) return _cdnHost;
   if (_cdnResolving) return _cdnResolving;
   _cdnResolving = (async () => {
@@ -1855,8 +1964,13 @@ let GN_COVER = "https://cdn.jsdelivr.net/gh/freebuisness/covers@main";
 let GN_HTML  = "https://cdn.jsdelivr.net/gh/freebuisness/html@main";
 let gnZones = [], ugsGames = [], seraphGames = [], luminsdkGames = [], noahGames = [], zengsGames = [];
 let gnPop = {};
-const SRC_LABEL = { gn:'GN-Math', ugs:'UGS', seraph:'Seraph', luminsdk:'LuminSDK', noah:"Noah's Tutoring", zengs:'Zen GS' };
-let activeSrcs = new Set(['gn','ugs','seraph','luminsdk','noah','zengs']);
+const SRC_LABEL = { gn:'GN-Math', ugs:'UGS', seraph:'Seraph', luminsdk:'LuminSDK', noah:"Noah's Tutoring", zengs:'Zen GS', misc:'Miscellaneous' };
+// Miscellaneous bundles several small libraries under one chip, but a card should name
+// the library it actually came from, not the bucket. Any game may carry `_lib` to
+// override its source label; everything without one is unchanged.
+const srcLabel = (g, fb) => (g && g._lib) || SRC_LABEL[g && g._src] || fb;
+let activeSrcs = new Set(['gn','ugs','seraph','luminsdk','noah','zengs','misc']);
+let miscGames = [];
 let activeSrc  = 'all'; // kept for compat
 let activeView = 'all';
 let activeSearch = '';
@@ -1912,12 +2026,27 @@ async function glList(path){
 async function loadAll() {
   const rerender = () => { buildSidebar(); render(); renderHome(); };
   rerender(); // paint the shell immediately
+  // Local Mode: lock the network FIRST, then serve only what is stored. No resolveCdn,
+  // no loaders, no cover fetches: the page makes no outbound request at all.
+  if (localOn()){
+    _netLock();
+    await _locRefresh();
+    rerender();
+    // Nothing can be saved while offline, so the player's Save button is meaningless.
+    const _sb = document.getElementById('saveOfflineBtn'); if (_sb) _sb.style.display = 'none';
+    console.log('[N3ptune] Local Mode: ' + localGames.length + ' saved game'
+      + (localGames.length === 1 ? '' : 's') + ' available offline. No network requests will be made.');
+    return;
+  }
+  // Even when online, know what is saved so cards can show it and a dead mirror can fall
+  // back to the local copy.
+  _locRefresh().catch(()=>{});
   // UGS moved off GitLab onto jsDelivr, so it builds CDN URLs like Seraph and
   // GN-Math do — every one of them has to wait for the fastest mirror first.
   await resolveCdn().catch(() => {});
   GN_COVER = `https://${_cdnHost}/gh/freebuisness/covers@main`;
   GN_HTML  = `https://${_cdnHost}/gh/freebuisness/html@main`;
-  await Promise.allSettled([ loadUGS().then(rerender).catch(()=>{}), loadSeraph().then(rerender), loadGN().then(rerender), loadNoah().then(rerender).catch(()=>{}), loadLuminSdk().then(rerender).catch(()=>{}), loadZengs().then(rerender).catch(()=>{}) ]);
+  await Promise.allSettled([ loadUGS().then(rerender).catch(()=>{}), loadSeraph().then(rerender), loadGN().then(rerender), loadNoah().then(rerender).catch(()=>{}), loadLuminSdk().then(rerender).catch(()=>{}), loadZengs().then(rerender).catch(()=>{}), loadMisc().then(rerender).catch(()=>{}) ]);
   rerender();
 }
 
@@ -2315,15 +2444,27 @@ async function loadZengs(){
 //  is the only usable index — which is fine, it is the canonical list anyway.
 // ═══════════════════════════════════════════════════════════
 const NOAH_REPO = 'NoahsAmazingTutoringHelp/Noahs-Calculus-Tutor', NOAH_REF = 'master';
-const NOAH_INREPO = /^https?:\/\/raw\.githubusercontent\.com\/NoahsAmazingTutoringHelp\/Noahs-Calculus-Tutor\/refs\/heads\/master\//i;
+// Noah's repo moved its index from `games.js` to `js/games.js` AND rewrote every entry
+// from raw.githubusercontent.com to cdn.jsdelivr.net (2026-11-20). Either change alone
+// would have zeroed the source: the old path now 404s on every mirror (cdn.jsdelivr.net
+// answers 403 "Package size exceeded" instead, because the repo has since crossed the
+// 50 MB package limit - individual files still serve 200, only the missing path reports
+// it that way), and the old raw.githubusercontent-only regex matched none of the new
+// URLs, so every record was dropped as "off-CDN". Match the repo on ANY host now, so a
+// future flip back to raw.githubusercontent, or a mirror host, keeps working. Entries
+// that genuinely live elsewhere (githack, netlify, *.github.io, …) still fail this and
+// are still skipped on purpose: 430 of 443 records are usable.
+const NOAH_INDEX = 'js/games.js';
+const NOAH_INREPO = /^https?:\/\/[a-z0-9.-]+\/(?:gh\/)?NoahsAmazingTutoringHelp\/Noahs-Calculus-Tutor[@\/]/i;
 
 async function loadNoah() {
   const BASE = `https://${_cdnHost}/gh/${NOAH_REPO}@${NOAH_REF}/`;
   // Cache only id/name/image-filename — never absolute URLs, so a later mirror
   // change still produces correct links from the same cached list.
-  const games = await cachedList('noah_v1', async () => {
-    const res = await _origFetch(BASE + 'games.js', { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) throw new Error('noah games.js ' + res.status);
+  // Cache key bumped with the index move: v1 holds the now-permanently-empty list.
+  const games = await cachedList('noah_v2', async () => {
+    const res = await _origFetch(BASE + NOAH_INDEX, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('noah ' + NOAH_INDEX + ' ' + res.status);
     const txt = await res.text();
     // Parse, don't execute: it's a script file, and the fields aren't uniform
     // (one entry has no image at all).
@@ -2342,6 +2483,10 @@ async function loadNoah() {
                  img: (image && NOAH_INREPO.test(image)) ? image.split('/').pop() : null });
     }
     if (!out.length) throw new Error('noah: no games parsed');
+    // A parse that yields far fewer than the ~430 expected means the format shifted
+    // again; say so rather than silently shipping a truncated list.
+    if (out.length < 200) console.warn('[N3ptune] Noah: only ' + out.length
+      + ' games parsed from ' + NOAH_INDEX + ' - their format may have changed again');
     return out;
   });
   noahGames = games.map(({ id, name, img }) => ({
@@ -2353,6 +2498,193 @@ async function loadNoah() {
   }));
   noahGames.sort((a,b)=>a.name.localeCompare(b.name));
   console.log('[N3ptune] Noah\'s Tutoring loaded ('+noahGames.length+' games)');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MISCELLANEOUS — several small jsDelivr game libraries under one chip
+//
+//  Discovered from the Blizzard index (blizzard.edgeone.dev, which loads
+//  nerdcrab/blizzard from jsDelivr). We do NOT read Blizzard's own catalogue: it is an
+//  8 MB inline blob, far past what localStorage can cache, and copying it would be the
+//  hardcoded game list the DO rules forbid. Blizzard was used only to find WHICH repos
+//  exist; every library below is enumerated at runtime from its OWN index, exactly like
+//  every other source here.
+//
+//  Each library keeps its own name on the card via `_lib`, so the chip reads
+//  "Miscellaneous" while a card reads "Chicken King's Vault".
+//
+//  Deliberately excluded, all verified 2026-11-20:
+//    • Anything not on jsDelivr. Blizzard's catalogue is full of raw.githubusercontent,
+//      raw.githack and one-off hosts (chicken.parmacitieschools.org, *.github.io,
+//      netlify, …). HARD RULE #1 allows none of them, and githack 301s binaries to
+//      raw.githubusercontent anyway.
+//    • Blizzard's thumbnails. They are sprite sheets (window.GAME_COVERS maps an id to a
+//      tile at x/y in /library-artwork/sheet-N.webp) and those sheets 404 on jsDelivr and
+//      are not served on their Pages host either, where every path returns the SPA shell.
+//      So covers here come from each library's own images, where it has them.
+//    • night, hydra, monkey, ccported, youtube-playables, 3kh0-assets: all over
+//      jsDelivr's 50 MB package limit (no file listing) AND shipping no index of their
+//      own, so there is no way to enumerate them. Individual files still serve, which is
+//      why Blizzard can link them one by one, but we cannot build a list.
+//    • daknux/html (232 files) and ubg-games (220): listable, but they carry no name
+//      index, so every title would read "0-fa.html". Names-only-from-filenames is worse
+//      than absent.
+//    • bloxys-playables emulator/html files: have a cdn-data/g.json with names and ids,
+//      but no id -> path pattern resolved (tried <id>.html, games/<id>.html,
+//      <id>/index.html, roms/<id>.html; all 404). Revisit if their layout is figured out.
+//    • slick's 225 `flash` entries: bare .swf files, which need a Ruffle wrapper page
+//      rather than a plain srcdoc load. Its html/url entries are included.
+const MISC_LIBS = [
+  { id:'ckv', label:"Chicken King's Vault", repo:'carbonicality/ChickenKingsVault', ref:'main', index:'games.json',
+    parse: j => (Array.isArray(j) ? j : []).map(g => (g && g.name && g.html)
+      ? { id:String(g.html).replace(/\.html?$/i,''), name:String(g.name),
+          file:'gamefiles/'+g.html, img: g.img ? 'gameimages/'+g.img : null } : null) },
+
+  { id:'alexr', label:"Alex's World", repo:'dskjfoisjfsjio/alexrsworld', ref:'main', index:'games.json',
+    parse: j => (Array.isArray(j) ? j : []).map(g => {
+      if (!g || !g.title || !g.path) return null;
+      const path = String(g.path).replace(/^\.?\//, '');
+      // Its covers live in a SIBLING repo as raw.githubusercontent URLs. Rewrite onto
+      // jsDelivr and keep only what rewrites: a banned host must never survive.
+      let gh = null;
+      const m = /^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/i.exec(String(g.img || ''));
+      if (m) gh = m[1] + '/' + m[2] + '@' + m[3] + '/' + m[4];
+      return { id:path.replace(/^.*\//,'').replace(/\.html?$/i,''), name:String(g.title), file:path, img:null, imgGh:gh };
+    }) },
+
+  // Slick splits 768 entries four ways: 153 relative `url` (its own catalogue, kept),
+  // 390 `html` that are ABSOLUTE URLs into bubbls/UGS-Assets (the UGS upstream we
+  // already carry 2,682 games from, so keeping them would mass-duplicate UGS), and 225
+  // `flash` .swf needing a Ruffle wrapper. Hence relative-and-not-flash only: 153.
+  { id:'slick', label:'Slick Catalog', repo:'worships/slick-catalog', ref:'main', index:'games.json',
+    parse: j => (((j && j.games) || [])).map(g => (g && g.name && g.src && g.type !== 'flash' && !/^https?:/i.test(g.src))
+      ? { id:String(g.id || g.src), name:String(g.name), file:String(g.src), img:null } : null) },
+
+  // Recovered 2026-11-20 by reading Blizzard's own URLs for the path PATTERN, then
+  // enumerating each library from its own index. The earlier "unfixable" verdict on these
+  // was wrong: the index existed, the path shape was just guessed incorrectly.
+  //
+  // Bloxy's filename is the game's NAME, not its id - `10-Yard Fight.html`, not
+  // `10ydf.html`. That single wrong guess is why both bloxy libraries looked dead.
+  // Their g.json also has trailing commas, hence the tolerant parse.
+  { id:'bloxyemu', label:'Bloxy Emulators', repo:'bloxys-playables/emulator-files', ref:'main',
+    index:'cdn-data/g.json', loose:true,
+    parse: j => (Array.isArray(j) ? j : []).map(g => (g && g.name)
+      ? { id:String(g.name), name:String(g.name), file:String(g.name) + '.html', img:null } : null) },
+
+  { id:'bloxyhtml', label:'Bloxy HTML', repo:'bloxys-playables/html-files', ref:'main',
+    index:'cdn-data/g.json', loose:true,
+    parse: j => (Array.isArray(j) ? j : []).map(g => (g && g.name)
+      ? { id:String(g.name), name:String(g.name), file:String(g.name) + '.html', img:null } : null) },
+
+  // MonkeyGG2's site config carries the real name -> path map. 75 of its 194 entries are
+  // `flash/?game=x` query-string routes (a Ruffle shell, not a page), which are skipped.
+  { id:'monkey', label:'MonkeyGG2', repo:'MonkeyGG2/monkeygg2.github.io', ref:'main',
+    index:'js/config.js', raw:true,
+    parse: txt => {
+      const s = txt.indexOf('{', txt.indexOf('var json'));
+      if (s < 0) return [];
+      let d = 0, inS = false, esc = false, end = -1;
+      for (let i = s; i < txt.length; i++) {
+        const c = txt[i];
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inS = !inS; continue; }
+        if (inS) continue;
+        if (c === '{') d++; else if (c === '}') { d--; if (!d) { end = i; break; } }
+      }
+      if (end < 0) return [];
+      const games = (JSON.parse(txt.slice(s, end + 1)) || {}).games || {};
+      return Object.keys(games).map(n => {
+        const pth = games[n] && games[n].path;
+        if (!pth || /[?&=]/.test(pth)) return null;             // flash/?game= routes
+        return { id:String(pth), name:String(n), file:'games/' + pth + '/index.html', img:null };
+      });
+    } },
+
+  // UBG ships no name index, but it IS under the 50 MB listing limit, so the file list
+  // itself is the index and its slugs are readable (unlike daknux's "0-fa").
+  { id:'ubg', label:'UBG Games', repo:'ubg-games/ubg-games.github.io', ref:'main', meta:true,
+    parse: files => (files || []).map(f => {
+      const m = /^\/gameFiles\/([^/]+)\/index\.html$/i.exec(f && f.name ? f.name : f);
+      if (!m) return null;
+      const slug = m[1];
+      return { id:slug, file:'gameFiles/' + slug + '/index.html', img:null,
+               name: slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) };
+    }) },
+
+  // LupineVault names its folders after the game, so the slug is derivable. Measured
+  // 12/14 reachable; the misses are genuine absences (jsDelivr answers an oversized
+  // package's miss with a 403 "Package size exceeded" body rather than a 404), so expect
+  // roughly one in seven of its 411 to be a dead link. Kept because 350-odd work.
+  { id:'lupine', label:'Lupine Vault', repo:'tharun9772/LupineVault', ref:'main', index:'assets/games.json',
+    parse: j => (Array.isArray(j) ? j : []).map(g => {
+      if (!g || !g.name) return null;
+      const slug = String(g.name).toLowerCase().replace(/['\u2019.]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (!slug) return null;
+      return { id:slug, name:String(g.name), file:'games/files/' + slug + '/index.html', img:null };
+    }) },
+
+  { id:'gclass', label:'Google Class', repo:'bloxcraft-st/google-class-files', ref:'main', index:'assets/games.json',
+    // Its `img` is one shared Google Classroom logo on every entry, so it is dropped
+    // rather than painting 143 identical covers.
+    parse: j => (Array.isArray(j) ? j : []).map(g => (g && g.name && g.url)
+      ? { id:String(g.url).replace(/\.html?$/i,''), name:String(g.name), file:String(g.url), img:null } : null) },
+];
+
+async function loadMisc() {
+  const enc = s => String(s).split('/').map(encodeURIComponent).join('/');
+  const out = [];
+  await Promise.allSettled(MISC_LIBS.map(async lib => {
+    const BASE = `https://${_cdnHost}/gh/${lib.repo}@${lib.ref}/`;
+    // Cache RELATIVE paths only, so a later mirror change rebuilds correct URLs.
+    const recs = await cachedList('misc_' + lib.id + '_v1', async () => {
+      let data;
+      if (lib.meta) {
+        // No name index, but the package is under the 50 MB limit so the FILE LIST is the
+        // index. data.jsdelivr.com is explicitly allowed by the hard rule.
+        const mr = await _origFetch('https://data.jsdelivr.com/v1/packages/gh/' + lib.repo
+          + '@' + lib.ref + '?structure=flat', { signal: AbortSignal.timeout(25000) });
+        if (!mr.ok) throw new Error(lib.id + ' metadata ' + mr.status);
+        const mj = await mr.json();
+        if (!mj || !mj.files) throw new Error(lib.id + ': metadata has no file list');
+        data = mj.files;
+      } else {
+        const res = await _origFetch(BASE + lib.index, { signal: AbortSignal.timeout(20000) });
+        if (!res.ok) throw new Error(lib.id + ' ' + lib.index + ' ' + res.status);
+        const txt = await res.text();
+        if (/Package size exceeded|Couldn't find the requested file/i.test(txt))
+          throw new Error(lib.id + ': jsDelivr refused the index');
+        // `raw` libraries parse the text themselves (a JS file, not JSON); `loose` ones
+        // are JSON with trailing commas, which JSON.parse rejects outright.
+        data = lib.raw ? txt
+             : JSON.parse(lib.loose ? txt.replace(/,\s*([\]}])/g, '$1') : txt);
+      }
+      const rows = (lib.parse(data) || []).filter(Boolean);
+      const seen = new Set(), keep = [];
+      for (const r of rows) {
+        if (!r.id || !r.name || !r.file || seen.has(r.id)) continue;
+        seen.add(r.id); keep.push(r);
+      }
+      if (!keep.length) throw new Error(lib.id + ': no games parsed');
+      return keep;
+    });
+    for (const r of recs) {
+      out.push({
+        _src:'misc', _lib:lib.label, _key:'misc_' + lib.id + '_' + r.id, _id:r.id,
+        name: r.name,
+        cover: r.imgGh ? `https://${_cdnHost}/gh/${r.imgGh}` : (r.img ? BASE + enc(r.img) : null),
+        url:   BASE + enc(r.file),
+        tags: [], featured:false,
+      });
+    }
+    console.log('[N3ptune] Misc/' + lib.label + ' loaded (' + recs.length + ' games)');
+  }));
+  miscGames = out;
+  miscGames.sort((a,b)=>a.name.localeCompare(b.name));
+  console.log('[N3ptune] Miscellaneous loaded (' + miscGames.length + ' games from '
+    + MISC_LIBS.length + ' libraries)');
 }
 
 async function loadSeraph() {
@@ -2397,6 +2729,7 @@ async function loadSeraph() {
 
 
 function getUnified() {
+  if (localOn()) return localGames.slice();   // offline: saved games are the catalogue
   let list = [];
   if (activeSrcs.has('gn'))
     list.push(...gnZones.map(z=>{
@@ -2423,6 +2756,8 @@ function getUnified() {
     list.push(...noahGames);
   if (activeSrcs.has('zengs'))
     list.push(...zengsGames);
+  if (activeSrcs.has('misc'))
+    list.push(...miscGames);
   return list;
 }
 
@@ -2503,7 +2838,7 @@ function _vsRenderBatch() {
   for(let i = _vsRendered; i < end; i++){
     const g = _vsItems[i];
     const plays=g._src==='gn'?gnPop.year?.[g._id]:null;
-    const sub=plays?fmtN(plays)+' plays':(g.tags[0]?cap(g.tags[0]):(SRC_LABEL[g._src]||'GN-Math'));
+    const sub=plays?fmtN(plays)+' plays':(g.tags[0]?cap(g.tags[0]):srcLabel(g,'GN-Math'));
     const card=document.createElement('div');
     card.className='gcard'+(blockedGames.has(g._key)?' blocked':'');
     card.setAttribute('onclick',`launch('${g._key}')`);
@@ -2525,6 +2860,7 @@ function fmtN(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).
 
 
 function getAllGames() {
+  if (localOn()) return localGames.slice();
   // Get all games regardless of activeSrcs filter
   let list = [];
   list.push(...gnZones.map(z=>({
@@ -2539,6 +2875,7 @@ function getAllGames() {
   list.push(...luminsdkGames);
   list.push(...noahGames);
   list.push(...zengsGames);
+  list.push(...miscGames);
   return list;
 }
 
@@ -2549,9 +2886,9 @@ function pickRandom(arr, n, filterFn) {
 }
 
 function hcardHTML(g) {
-  const srcLabel = SRC_LABEL[g._src] || 'UGS';
+  const label = srcLabel(g, 'UGS');   // per-library name for Miscellaneous, source name otherwise
   const dotClass = g._src;
-  const plays = g._src==='gn' && gnPop.year?.[g._id] ? fmtN(gnPop.year[g._id])+' plays' : srcLabel;
+  const plays = g._src==='gn' && gnPop.year?.[g._id] ? fmtN(gnPop.year[g._id])+' plays' : label;
   return `<div class="hcard" onclick="launch('${g._key}')">
     ${g.cover
       ? `<img class="hcard-thumb" src="${g.cover}" alt="${esc(g.name)}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="hcard-ph" style="display:none">${_IC_GAMEPAD}</div>`
@@ -2708,7 +3045,7 @@ function _peRow(g, mode){
     ? `<button class="pe-btn rm" title="Remove" onclick="popRemove('${_q(g._key)}')">&times;</button>`
     : `<button class="pe-btn add" title="Add" onclick="popAdd('${_q(g._key)}')">+</button>`;
   return `<div class="pe-item">${art}<span class="pe-nm">${esc(g.name)}</span>`
-       + `<span class="pe-src">${esc(SRC_LABEL[g._src]||g._src)}</span>${btn}</div>`;
+       + `<span class="pe-src">${esc(srcLabel(g,g._src))}</span>${btn}</div>`;
 }
 function renderPopEdit(){
   const all = getAllGames();
@@ -2757,6 +3094,7 @@ function popRemove(key){
 function resetPopPicks(){ setPopPicks(null); }
 
 function renderHome(){
+  try { _mountAds(); _renderAdsToggle(); } catch(e){}
   const all = getAllGames();
   const fc = document.getElementById('foot-count');
   if (fc) fc.textContent = all.length.toLocaleString() + ' games';
@@ -2997,10 +3335,24 @@ async function glFetchEntry(dir) {
 // they cover every way a game can request an asset. Self-contained so it
 // survives .toString() injection (no closure references).
 function __cdnfix() {
-  // No-op: keep everything on jsDelivr (staticdelivr 301s .wasm and breaks games
-  // like Ruffle; jsDelivr serves these assets correctly). Returning null means
-  // "don't rewrite". Kept as a seam for a future per-account fallback.
-  function S(u){ return null; }
+  // Route jsDelivr URLs the game builds AT RUNTIME to the mirror resolveCdn() picked.
+  // Static markup is handled by patchHtml(), but a game that injects a <script> or
+  // fetches a hardcoded cdn.jsdelivr.net URL at runtime bypassed that entirely, so on a
+  // network blocking that one host those requests just died. That is the
+  // "resource FAILED to load: cdn.jsdelivr.net <script>" cluster in the bug reports, and
+  // it is what leaves games like Soccer Random without their SDK. window.__n3cdn is set
+  // by _cdnfixShim() ONLY when the resolved mirror differs, so the default path stays a
+  // no-op. Never reroutes to a non-jsDelivr host.
+  function S(u){
+    try {
+      var H = window.__n3cdn; if (!H) return null;
+      u = '' + u;
+      if (!/^https?:\/\/[a-z0-9.-]*(?:jsdelivr\.net|staticdelivr\.com)\//i.test(u)) return null;
+      var m = u.replace(/^https?:\/\/[a-z0-9.-]*(?:jsdelivr\.net|staticdelivr\.com)/i, 'https://' + H);
+      if (H === 'cdn.staticdelivr.com') m = m.replace(/(\/gh\/[^\/'"<>\s]+\/[^@'"<>\s]+)@/, '$1/');
+      return m === u ? null : m;
+    } catch(e){ return null; }
+  }
   if (window.fetch){ var of = window.fetch.bind(window); window.fetch = function(i, n){ try { var u = (i && i.url) ? i.url : i, m = S(u); if (m) return (i && i.url) ? of(new Request(m, i), n) : of(m, n); } catch(e){} return of(i, n); }; }
   var oo = XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open = function(me, u){ try { var m = S(u); if (m) arguments[1] = m; } catch(e){} return oo.apply(this, arguments); };
   function hk(proto, prop){ try { var d = proto && Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
@@ -3011,7 +3363,13 @@ function __cdnfix() {
   var sa = Element.prototype.setAttribute; Element.prototype.setAttribute = function(n, v){ try { var l = ('' + n).toLowerCase(); if (l === 'src' || l === 'href'){ var m = S(v); if (m) return sa.call(this, n, m); } } catch(e){} return sa.apply(this, arguments); };
   if (window.Worker){ var OW = window.Worker; window.Worker = function(u, o){ try { var m = S(u); if (m) return new OW(m, o); } catch(e){} return new OW(u, o); }; window.Worker.prototype = OW.prototype; }
 }
-function _cdnfixShim(){ return '<script>(' + __cdnfix.toString() + ')()<\/script>'; }
+function _cdnfixShim(){
+  // Hand the resolved mirror to the in-frame shim. Omitted on the default host so the
+  // shim stays a pure no-op there.
+  const H = (typeof _cdnHost === 'string' && _cdnHost && _cdnHost !== 'cdn.jsdelivr.net') ? _cdnHost : '';
+  return '<script>' + (H ? 'window.__n3cdn=' + JSON.stringify(H) + ';' : '')
+    + '(' + __cdnfix.toString() + ')()<\/script>';
+}
 
 // __dataGuard runs inside each game iframe. Several GN Unity builds are too big
 // for one jsDelivr file, so the game's OWN html splits <build>.data.unityweb into
@@ -3553,7 +3911,7 @@ function _gameLogShim(tag){
     // blocked, CSP, offline) and the game is completely fine without them, so we
     // log them as harmless info, NOT as errors — otherwise every launch looks
     // broken (e.g. cdn.r9x.in/ailogic_gn-math.dev_obf.js on GN-Math games).
-    var NONFATAL = /(?:r9x\.in|ailogic|doubleclick|googlesyndication|googletagmanager|google-analytics|googletagservices|adservice|gampad|adsbygoogle|pagead|securepubads|imasdk|ima3|firebaseio|firebaseinstallations|crazygames|poki|gamemonetize|gamedistribution|onesignal|clarity\.ms|hotjar|cloudflareinsights|sentry|scorecardresearch|adsbygoogle|adsLoader|SDK_ERROR|Ads SDK|monetize)/i;
+    var NONFATAL = /(?:r9x\.in|ailogic|doubleclick|googlesyndication|googletagmanager|google-analytics|googletagservices|adservice|gampad|adsbygoogle|pagead|securepubads|imasdk|ima3|firebaseio|firebaseinstallations|crazygames|poki|gamemonetize|gamedistribution|onesignal|clarity\.ms|hotjar|cloudflareinsights|sentry|scorecardresearch|adsbygoogle|adsLoader|SDK_ERROR|Ads SDK|monetize|connect\.facebook\.net|fbevents|facebook\.com\/tr|wgplayer|quantserve|moatads|amplitude|mixpanel|segment\.(?:io|com)|tiktok|snapchat|bing\.com\/bat|mc\.yandex|matomo|piwik|plausible|fullstory|logrocket|newrelic|nr-data)/i;
     ['log','info','warn','error','debug'].forEach(function(m){
       var o = console[m] ? console[m].bind(console) : function(){};
       console[m] = function(){
@@ -3769,20 +4127,29 @@ function _repairGhostRefs(html, log){
 // jquery@3.4.1); libraries without a version in the name are pinned to a stable
 // major (their APIs are backward-compatible for game usage). Verified 200 on
 // jsDelivr npm. Applied in BOTH loaders (GN/Seraph srcdoc + GitLab).
-const _JSD = 'https://cdn.jsdelivr.net/npm/';
+// Follow the RESOLVED mirror. This used to be the constant
+// 'https://cdn.jsdelivr.net/npm/', and _repairLibRefs runs AFTER patchHtml, so every
+// library we 'repaired' was pinned to cdn.jsdelivr.net even when resolveCdn() had
+// already fallen to another mirror because that host was blocked. Bug reports showed
+// our own rewrite producing 'resource FAILED to load: cdn.jsdelivr.net/npm/jquery...'.
+const _jsd = () => 'https://' + (typeof _cdnHost === 'string' && _cdnHost ? _cdnHost : 'cdn.jsdelivr.net') + '/npm/';
 const LIB_CDN_FIXES = [
   // jQuery with a version in the filename → same version on npm
   [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/jquery-(\d+(?:\.\d+)+)(?:\.min)?\.js/gi,
-    (_m, ver) => _JSD + 'jquery@' + ver + '/dist/jquery.min.js'],
+    (_m, ver) => _jsd() + 'jquery@' + ver + '/dist/jquery.min.js'],
   // Howler (no version in filename) → stable 2.x
   [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/howler(?:\.min)?\.js/gi,
-    () => _JSD + 'howler@2.2.4/dist/howler.min.js'],
+    () => _jsd() + 'howler@2.2.4/dist/howler.min.js'],
   // html2canvas (no version in filename) → stable 1.x
   [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/html2canvas(?:\.min)?\.js/gi,
-    () => _JSD + 'html2canvas@1.4.1/dist/html2canvas.min.js'],
+    () => _jsd() + 'html2canvas@1.4.1/dist/html2canvas.min.js'],
+  // jszip from cdnjs → the same version on jsDelivr npm. cdnjs is a separate host and is
+  // blocked on several reporters' networks; jsDelivr is already allowed and serves it.
+  [/https?:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/jszip\/(\d+(?:\.\d+)+)\/jszip(?:\.min)?\.js/gi,
+    (_m, ver) => _jsd() + 'jszip@' + ver + '/dist/jszip.min.js'],
   // tween.js (Tween.js, no version in filename) → stable @tweenjs 18.x (TWEEN global)
   [/https?:\/\/[a-z.]*jsdelivr\.net\/gh\/[^"'<>\s)]*?\/Tween(?:\.min)?\.js/gi,
-    () => _JSD + '@tweenjs/tween.js@18.6.4/dist/tween.umd.min.js'],
+    () => _jsd() + '@tweenjs/tween.js@18.6.4/dist/tween.umd.min.js'],
 ];
 function _repairLibRefs(html, log){
   for (const [re, to] of LIB_CDN_FIXES) {
@@ -3887,7 +4254,7 @@ async function launch(key) {
   glog('info', '▶ launching   src='+g._src+'   key='+key);
   glog('info', 'url:', g.url || '(LuminSDK resolves it at launch)');
   document.getElementById('ptitle').textContent=g.name;
-  document.getElementById('lsrc').textContent=SRC_LABEL[g._src]||'UGS';
+  document.getElementById('lsrc').textContent=srcLabel(g,'UGS');
   document.getElementById('lsrc').className='lsrc '+g._src;
   document.getElementById('ltxt').textContent='Loading '+g.name+'...';
   document.getElementById('showAnywayBtn').style.display='none';
@@ -4040,16 +4407,47 @@ async function launch(key) {
   }
 
   try{
-    const result = await tryFetch(g.url);
+    // Local Mode serves the saved copy and never touches the network. When online, a
+    // saved copy is still used as a RESCUE if every mirror fails, which turns a dead
+    // game into a working one at no cost.
+    let result = null;
+    const _savedRec = await _locGet(key);
+    if (localOn()){
+      if (!_savedRec){
+        glog('error', 'Local Mode is on and this game is not saved offline.');
+        const ltxt = document.getElementById('ltxt');
+        if (ltxt) ltxt.textContent = 'Not saved for offline. Turn Local Mode off to play it.';
+        document.getElementById('showAnywayBtn').style.display='none';
+        clearTimeout(window._showAnywayTimer);
+        return;
+      }
+      result = { text:_savedRec.html, mirror:'local cache' };
+      glog('info', 'loader: Local Mode (saved copy, no network)');
+      if (!_savedRec.selfContained)
+        glog('info', 'note: this game referenced external files when it was saved, so parts of it may not run offline.');
+    } else {
+      result = await tryFetch(g.url);
+      if (!result && _savedRec){
+        result = { text:_savedRec.html, mirror:'local cache' };
+        glog('info', 'every mirror failed, falling back to the offline copy');
+      }
+    }
     if (!result) throw new Error('All mirrors failed');
     const rawHtml = result.text;
+    activeGame.rawHtml = rawHtml;          // what saveOffline() stores
+    _syncSaveBtn(key);
     glog('ok', 'fetched HTML from '+result.mirror+' ('+rawHtml.length+' bytes)');
     // Route GN-Math / Seraph off jsDelivr.net (account blocks) onto staticdelivr:
     // rewrite static markup, point the base there, and inject __cdnfix for any
     // runtime/hardcoded jsDelivr URLs. Same one patch as the GitLab loader.
     const gameHtml = _cdnStatic(patchHtml(rawHtml));
     activeGame.gnHtml = gameHtml;
-    const baseUrl = _cdnStatic(_swapMirror(g.url, result.mirror).replace(/\/[^\/]*$/, '/'));
+    // When the page came from the offline cache, result.mirror is the label 'local cache',
+    // not a host. Feeding that to _swapMirror produced a base of "https://local cache/gh/…",
+    // which is nonsense. Build the base from the RESOLVED mirror in that case; in Local
+    // Mode no base is injected at all (see below).
+    const _fromCache = result.mirror === 'local cache';
+    const baseUrl = _cdnStatic(_swapMirror(g.url, _fromCache ? _cdnHost : result.mirror).replace(/\/[^\/]*$/, '/'));
     let injected = gameHtml;
     if (!/<head/i.test(injected)) {
       injected = '<html><head></head><body>' + injected + '</body></html>';
@@ -4069,9 +4467,21 @@ async function launch(key) {
     // engine/data — unrecoverable. Stop here rather than write a black frame.
     const _blkAcct = _blockedAccountIn(injected);
     if (_blkAcct) { _showBlockedNotice(key, _blkAcct); return; }
-    const hasOwnBase = /<base\b[^>]*\bhref\s*=/i.test(injected);
-    glog('info', hasOwnBase ? 'using the game\'s OWN <base> (not injecting ours)' : ('injected <base> '+baseUrl));
-    const headInject = _gameLogShim(g.name) + _srcdocUrlFix() + _ytgameStub() + _kongregateStub() + _unityFitShim() + _dataGuardShim() + __touchKeys() +
+    // In Local Mode an injected CDN base would just produce requests the CSP then
+    // blocks, so skip it: a self-contained page needs no base at all.
+    const hasOwnBase = /<base\b[^>]*\bhref\s*=/i.test(injected) || localOn();
+    glog('info', localOn() ? 'Local Mode: no <base> injected (offline)'
+      : (hasOwnBase ? 'using the game\'s OWN <base> (not injecting ours)' : ('injected <base> '+baseUrl)));
+    // The real guarantee behind "no requests will be sent out". A meta CSP is enforced
+    // by the browser, so unlike a monkey-patched fetch the game cannot get around it.
+    // Inline/eval script and data: and blob: resources stay allowed, which is everything
+    // a self-contained game needs; connect-src 'none' kills fetch, XHR and WebSocket.
+    const cspLock = !localOn() ? '' :
+      '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
+      + 'script-src \'unsafe-inline\' \'unsafe-eval\' data: blob:; '
+      + 'style-src \'unsafe-inline\' data:; img-src data: blob:; media-src data: blob:; '
+      + 'font-src data:; connect-src \'none\'; form-action \'none\'">';
+    const headInject = cspLock + _gameLogShim(g.name) + _srcdocUrlFix() + _ytgameStub() + _kongregateStub() + _unityFitShim() + _dataGuardShim() + __touchKeys() +
       (hasOwnBase ? '' : `<base href="${baseUrl}">`) +
       `<meta name="viewport" content="width=device-width,initial-scale=1">` +
       `<style>html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:#000}` +
@@ -4114,6 +4524,43 @@ function showGameAnyway() {
   document.getElementById('pload').classList.add('gone');
   document.getElementById('showAnywayBtn').style.display='none';
   clearTimeout(window._showAnywayTimer);
+}
+
+// Keeps the player's Save button in step with what is actually stored.
+async function _syncSaveBtn(key){
+  const btn = document.getElementById('saveOfflineBtn');
+  if (!btn) return;
+  if (localOn()){ btn.style.display = 'none'; return; }   // nothing to save while offline
+  btn.style.display = '';
+  const rec = await _locGet(key);
+  btn.textContent = rec ? 'Saved \u2713' : 'Save offline';
+  btn.classList.toggle('pri', !!rec);
+  btn.title = rec
+    ? 'Saved for Local Mode' + (rec.selfContained ? '' : ' (needs some online files, may not fully run offline)') + '. Click to remove.'
+    : 'Save this game to play with the network off';
+}
+async function toggleSaveOffline(){
+  const btn = document.getElementById('saveOfflineBtn');
+  if (!btn || !activeGame || !activeGame.key) return;
+  const key = activeGame.key;
+  if (await _locGet(key)){
+    await removeOffline(key);
+    await _syncSaveBtn(key);
+    _locToast('Removed from offline games');
+    return;
+  }
+  if (!activeGame.rawHtml){ _locToast('Still loading, try again in a moment'); return; }
+  btn.textContent = 'Saving\u2026'; btn.disabled = true;
+  try {
+    const r = await saveOffline(key, activeGame.rawHtml, findByKey(key));
+    if (!r.ok) _locToast('Not saved: ' + r.why);
+    else _locToast(r.selfContained ? 'Saved for offline play'
+      : 'Saved, but it uses online files so it may not fully run offline');
+  } catch(e){
+    _locToast('Could not save: ' + (e && e.message ? e.message : e));
+  }
+  btn.disabled = false;
+  await _syncSaveBtn(key);
 }
 
 function closeGame(){
@@ -4653,7 +5100,10 @@ function showN3Toast(msg, ok=true) {
 const N3_OWN_KEY = /^(n3_|n3ptune_)/;
 // Unity's asset download cache: re-downloadable, routinely tens of MB, never
 // save data. Every other database is game progress and gets exported.
-const IDB_SKIP = /^UnityCache$/;
+// n3_local is the Local Mode game cache: re-downloadable and potentially hundreds of
+// MB, so it is excluded for the same reason UnityCache is. Without this a .n3pt save
+// would balloon to the size of every game you had saved offline.
+const IDB_SKIP = /^(UnityCache|n3_local)$/;
 
 // btoa needs a binary string; fromCharCode(...huge) overflows the call stack.
 function _b64enc(u8){
@@ -4958,6 +5408,114 @@ function loadData() {
 const CLOUDMOON_PORTAL = 'portal-260909.html';
 const CLOUDMOON_BASE = 'https://cdn.jsdelivr.net/gh/CloudMoonApp/web@main/';
 let _cloudLoaded = false, _cloudLoading = false, _cloudPortalHtml = null, _cloudWired = false;
+
+// -- Real-site mode ----------------------------------------------------------
+// The jsDelivr portal build is a stripped, ad-free distribution and CloudMoon caps it at
+// ~30 min/day (see the ad_unblock notes). Their REAL site carries the free-time machinery
+// and serves its own ads, which is what funds the unlimited tier, so embedding that is the
+// only honest route to it. Verified 2026-11-05: none of these four send X-Frame-Options or
+// a CSP frame-ancestors, none of their 40 app chunks frame-bust, and framed cross-origin
+// the app fully boots (289 requests, API on api.prod.cloudmoonapp.com) WITH its ads
+// loading (config.playwire.com, cdn.intergient.com, pagead2.googlesyndication.com).
+// All four are the same SvelteKit app behind the same four API hosts; web/pc are
+// server-rendered, viewoncloud/geometry.today ship the client-rendered shell.
+// This mode needs NO jsDelivr at all, so it survives a full jsDelivr block that the
+// portal mode only survives via the mirror list.
+// ORDER MATTERS, and not for speed. CloudMoon's app computes
+//   q = !location.host.includes("cloudmoonapp.com")
+// and switches its free-time + ad machinery OFF when that is true, so ONLY a
+// *.cloudmoonapp.com host serves ads and therefore only those give the unlimited tier.
+// Measured 2026-11-20 framed from another origin: web and pc -> 109 requests with ~30 ad
+// requests; viewoncloud.com -> 27 requests and ZERO ads, with its API reachable, so it is
+// not an API problem. geometry.today behaves the same.
+//
+// So the cloudmoonapp.com family goes first (all four serve the full server-rendered app
+// and all carry ads; apex and www verified live), and the other domains are a last resort
+// that keeps Cloud gaming WORKING but capped. A filter blocking only the `web` subdomain
+// is fully survivable; one blocking the whole cloudmoonapp.com domain costs the unlimited
+// tier no matter what we do, because the ads it is paid for cannot load anywhere else.
+const CM_SITES = [
+  'web.cloudmoonapp.com', 'pc.cloudmoonapp.com', 'cloudmoonapp.com', 'www.cloudmoonapp.com',
+  'viewoncloud.com', 'www.viewoncloud.com', 'geometry.today', 'www.geometry.today',
+];
+// Only these serve ads, so only these deliver the unlimited tier.
+const CM_AD_HOST = /(^|\.)cloudmoonapp\.com$/i;
+let _cloudMode = null;        // 'site' | 'portal' - which one actually mounted
+let _cloudSiteHost = null;    // the CM_SITES entry that answered
+
+// Preference: 'site' (default, with fallback) or 'portal'. Stored so it survives a reload.
+function _cloudPref(){ try { return localStorage.getItem('n3_cloud_mode') || 'site'; } catch(e){ return 'site'; } }
+
+// Reachability probe. A no-cors fetch resolves opaque when the host answers and rejects
+// when it is blocked or unresolvable, which is all we need since a cross-origin response
+// is unreadable anyway. A filter that serves its own block page looks reachable, so this
+// is best effort, not a guarantee.
+function _cloudProbe(host, ms){
+  return new Promise(res => {
+    let done = false;
+    const finish = v => { if (!done){ done = true; res(v); } };
+    const t = setTimeout(() => finish(false), ms || 6000);
+    fetch('https://' + host + '/?n3=' + Date.now(), { mode: 'no-cors', cache: 'no-store' })
+      .then(() => { clearTimeout(t); finish(true); })
+      .catch(() => { clearTimeout(t); finish(false); });
+  });
+}
+async function _cloudPickSite(){
+  for (const h of CM_SITES){ if (await _cloudProbe(h)) return h; }
+  return null;
+}
+
+// Flip between the real site and the re-skinned portal, and remember the choice.
+function _cloudSwitch(){
+  const next = _cloudMode === 'site' ? 'portal' : 'site';
+  console.log('[N3ptune] Cloud gaming: ads ' + (next === 'site' ? 'ON (CloudMoon\u2019s site, unlimited tier)'
+    : 'OFF (N3ptune portal, ~30 min/day cap)'));
+  try { localStorage.setItem('n3_cloud_mode', next); } catch(e){}
+  _cloudLoaded = false; _cloudLoading = false;
+  const wrap = document.getElementById('cloud-wrap');
+  if (wrap) wrap.innerHTML = '<div class="cloud-state"><div class="spinner"></div><p>Switching...</p></div>';
+  loadCloud();
+}
+
+// Controls overlaid on either iframe. In site mode the frame is cross-origin, so we cannot
+// know when a stream starts and Back is simply always available.
+//
+// The mode switch is presented as an ADS toggle, because that is exactly what it controls.
+// Ads on = CloudMoon's real site, which serves its own ads and is the only build with the
+// unlimited-tier machinery. Ads off = our re-skinned portal, which carries no ad units at
+// all but is the build CloudMoon caps at ~30 min/day.
+// We deliberately do NOT try to hide ads while staying in site mode. The frame is
+// cross-origin so we cannot inject into it (the iframe `csp` attribute needs the embedded
+// origin to opt in via Allow-CSP-From, and `sandbox` breaks the app), and even if we could,
+// CloudMoon's own AdBlock detection is what gates the unlimited tier, so suppressing the
+// ads would take the cap back anyway. Keep both halves of this honest.
+function _cloudControls(mode){
+  const base = 'z-index:60;align-items:center;gap:6px;height:38px;padding:0 15px;'
+    + 'background:rgba(7,17,32,.92);border:1px solid rgba(96,165,250,.3);color:#e8f4ff;'
+    + 'font:600 13px Fredoka,sans-serif;border-radius:10px;cursor:pointer;backdrop-filter:blur(8px)';
+  const site = mode === 'site';
+  // On a non-cloudmoonapp host the app runs but its ads (and so the unlimited tier) are
+  // switched off by CloudMoon itself, so don't advertise "unlimited" there.
+  const adCapable = site && CM_AD_HOST.test(String(_cloudSiteHost || ''));
+  const label = !site ? 'Ads off &middot; 30 min/day'
+    : (adCapable ? 'Ads on &middot; unlimited' : 'Ads on &middot; capped host');
+  const tip = site
+    ? (adCapable
+      ? 'Ads are ON. This is CloudMoon\u2019s own site, and their ads are what pay for the '
+        + 'unlimited free tier. Click to turn ads off: that switches to the N3ptune-skinned '
+        + 'portal, which shows no ads but is capped at about 30 minutes a day.'
+      : 'Running on ' + (_cloudSiteHost || 'a backup domain') + ' because cloudmoonapp.com '
+        + 'could not be reached. CloudMoon turns its ads off on that domain, so the unlimited '
+        + 'tier is not available here and play is still capped. Everything else works.')
+    : 'Ads are OFF. This is the N3ptune-skinned portal, which carries no ad units but is '
+      + 'capped at about 30 minutes a day. Click to turn ads on: that switches to '
+      + 'CloudMoon\u2019s own site, where their ads pay for unlimited play.';
+  return '<button id="cloud-back" onclick="_cloudBack()" style="' + (site ? 'display:inline-flex' : 'display:none')
+      + ';position:absolute;top:12px;left:12px;' + base + '">&#8592; Back to games</button>'
+    + '<button id="cloud-switch" onclick="_cloudSwitch()" title="' + tip + '"'
+      + ' style="display:inline-flex;position:absolute;top:12px;left:162px;' + base + '">'
+      + label + '</button>';
+}
 let _cloudSid = null;   // last launched CloudMoon sid, for "Play again" after a session end
 let _cloudPlayStart = 0;   // ms timestamp of the last launch, so _cloudEnded can report the length
 
@@ -4967,7 +5525,14 @@ let _cloudPlayStart = 0;   // ms timestamp of the last launch, so _cloudEnded ca
 // its srcdoc to the (cached, re-skinned) portal always works, error or not.
 function _cloudBack(){
   const f = document.getElementById('cloudFrame');
-  if (f && _cloudPortalHtml) f.srcdoc = _cloudPortalHtml;
+  if (!f) return;
+  if (_cloudMode === 'site'){
+    // Cross-origin: we cannot reach inside, but we own the element, so re-pointing src at
+    // the site root returns to the catalog however broken the current page is.
+    f.src = 'https://' + (_cloudSiteHost || CM_SITES[0]) + '/?n3=' + Date.now();
+    return;                                   // Back stays visible in site mode
+  }
+  if (_cloudPortalHtml) f.srcdoc = _cloudPortalHtml;
   const b = document.getElementById('cloud-back'); if (b) b.style.display = 'none';
 }
 // Dismiss the session-end notice without leaving the catalog.
@@ -5104,14 +5669,30 @@ var iv=setInterval(function(){if(document.body){clearInterval(iv);boot();}},80);
   // header means something and an unlimited account can never be falsely blocked by a
   // casing change. The raw value still goes to the console on every poll.
   const UNLIMIT_HEAD = `<script>(function(){
-function apply(A){
+function apply(A,seed){
+  // Show the REAL remaining time. An earlier version printed "Unlimited" here, which was
+  // wrong: CloudMoon still caps this build, so the header lied about the account state.
+  // Keep only the half that is defensible - make the portal's literal
+  //   this.timeLeft === "0h 0m"  ->  alert("No time left.")
+  // unable to fire for an account CloudMoon's own app never time-gates. The value is
+  // passed through untouched unless it would trip that exact comparison, in which case a
+  // trailing space goes on: visually identical, and the === can no longer match.
+  // Seed from what /phone/list just returned, and keep whatever the portal already had,
+  // so a read before the first poll can't fall into the "!this.timeLeft" half of the block.
+  var raw=seed||A.timeLeft||"";
   try{
     Object.defineProperty(A,"timeLeft",{configurable:true,
-      get:function(){return "Unlimited";},
-      set:function(v){try{console.log("[N3ptune] CloudMoon time_left =",v);}catch(e){}}});
+      get:function(){
+        var v=String(raw==null?"":raw);
+        if(!v) return "--:-- ";                                        // truthy, renders the same
+        // NB: no regex escapes here. This string is a backtick template in N3ptune, and a
+        // template collapses an unrecognised escape, so /\s+/g would ship as /s+/g.
+        return (v.toLowerCase().split(" ").join("")==="0h0m") ? v+" " : v;
+      },
+      set:function(v){raw=(v==null?"":v);try{console.log("[N3ptune] CloudMoon time_left =",v);}catch(e){}}});
   }catch(e){return;}
   try{A.renderUserArea&&A.renderUserArea();}catch(e){}
-  try{console.log("[N3ptune] Unlimited locale: time gate disabled, matching CloudMoon's own rule.");}catch(e){}
+  try{console.log("[N3ptune] Unlimited locale: the “No time left” block is defused; the header still shows the real time.");}catch(e){}
 }
 function boot(){
   var A=window.App;
@@ -5123,7 +5704,7 @@ function boot(){
     if(!d){setTimeout(boot,5000);return;}
     try{console.log("[N3ptune] CloudMoon account: unlimited_locale="+d.is_unlimit_locale
       +" proxy="+d.use_proxy+" time_left="+d.time_left+" sec="+d.time_left_sec);}catch(e){}
-    if(d.is_unlimit_locale&&!d.use_proxy)apply(A);
+    if(d.is_unlimit_locale&&!d.use_proxy)apply(A,d.time_left);
   }).catch(function(){setTimeout(boot,5000);});
 }
 boot();
@@ -5286,6 +5867,32 @@ async function loadCloud(){
   };
   setState('Starting cloud gaming…', false);
   try {
+    // Prefer CloudMoon's real site: it is the only build with the unlimited-tier machinery,
+    // and it needs no jsDelivr. Falls through to the re-skinned portal when every front-end
+    // is unreachable, so this never costs us a working Cloud page.
+    if (_cloudPref() !== 'portal'){
+      const host = await _cloudPickSite();
+      if (host){
+        _cloudSiteHost = host; _cloudMode = 'site';
+        wrap.innerHTML = '<iframe id="cloudFrame" allow="autoplay; fullscreen; gamepad; clipboard-write; encrypted-media; microphone; camera" allowfullscreen></iframe>'
+          + _cloudControls('site');
+        document.getElementById('cloudFrame').src = 'https://' + host + '/';
+        _cloudLoaded = true; _cloudLoading = false;
+        if (CM_AD_HOST.test(host)){
+          console.log('[N3ptune] Cloud gaming: embedded CloudMoon\u2019s real site (' + host + '). '
+            + 'Their ads run here, which is what pays for the unlimited tier. No N3ptune skin, '
+            + 'and none of our in-frame helpers apply. Switch with _cloudSwitch().');
+        } else {
+          console.warn('[N3ptune] Cloud gaming: cloudmoonapp.com was unreachable, so this is '
+            + host + '. CloudMoon disables its ads off its own domain, so the unlimited tier '
+            + 'is NOT active here and play stays capped. The site itself works normally.');
+        }
+        return;
+      }
+      console.warn('[N3ptune] Cloud gaming: no CloudMoon front-end reachable, falling back to the jsDelivr portal');
+      setState('Loading the backup cloud portal…', false);
+    }
+    _cloudMode = 'portal';
     await resolveCdn();
     // Don't trust a single mirror — the resolved one may be unreachable on this
     // network (that's why cloud gaming "only worked on fastly"). Try each in turn.
@@ -5312,9 +5919,7 @@ async function loadCloud(){
     if (!raw) throw (lastErr || new Error('all mirrors failed'));
     _cloudPortalHtml = _cloudReskin(raw, usedHost);
     wrap.innerHTML = '<iframe id="cloudFrame" allow="autoplay; fullscreen; gamepad; clipboard-write; encrypted-media; microphone; camera" allowfullscreen></iframe>'
-      + '<button id="cloud-back" onclick="_cloudBack()" style="display:none;position:absolute;top:12px;left:12px;z-index:60;'
-      + 'align-items:center;gap:6px;height:38px;padding:0 15px;background:rgba(7,17,32,.92);border:1px solid rgba(96,165,250,.3);'
-      + 'color:#e8f4ff;font:600 13px Fredoka,sans-serif;border-radius:10px;cursor:pointer;backdrop-filter:blur(8px)">← Back to games</button>';
+      + _cloudControls('portal');
     document.getElementById('cloudFrame').srcdoc = _cloudPortalHtml;
     _cloudWire();
     _cloudLoaded = true;
@@ -5327,7 +5932,334 @@ async function loadCloud(){
   }
 }
 
-// ── PAGE NAVIGATION ──
+// ── YOUR OWN ADS ───────────────────────────────────────────────
+// Fill in the two fields below from your Adsterra (or other network) ad code.
+//
+// DO NOT paste the raw snippet into this file. Every Adsterra snippet contains a literal
+// <\/script>, and this whole app is one inline <script> block, so pasting it would CLOSE
+// that block early and kill N3ptune outright: the rest of the app stops being JavaScript
+// and gets parsed as HTML. That is not theoretical, it was caught in testing here
+// ("SyntaxError: Unexpected end of input", every function after the paste undefined).
+// Giving the pieces separately keeps <\/script> out of the source entirely.
+//
+// From a snippet that looks like:
+//     <script type="text/javascript">
+//       atOptions = {'key':'abc123','format':'iframe','height':90,'width':728,'params':{}};
+//     <\/script>
+//     <script type="text/javascript" src="//www.highperformanceformat.com/abc123/invoke.js"><\/script>
+// put the src in ADS_SCRIPT_URL and the atOptions object in ADS_ATOPTIONS.
+// For the single-script formats (Social Bar, Popunder, Direct Link) there is no
+// atOptions: set ADS_SCRIPT_URL only and leave ADS_ATOPTIONS as null.
+//
+// Empty ADS_SCRIPT_URL = the feature is completely inert: no container, no script, no
+// request.
+//
+// Honest expectations, recorded so nobody re-litigates this later: Adsterra ties a
+// publisher account to a registered DOMAIN, and N3ptune has none. The SVG and cloak
+// launchers run the app from an opaque (null) origin, N3ptune.bat serves 127.0.0.1, and
+// the published copy lives on a jsDelivr path you cannot claim as your property. On top
+// of that, the school networks this app targets block ad hosts by category. So this will
+// very often serve nothing. It was still built because the user asked for it knowing that.
+const ADS_SCRIPT_URL = '';
+const ADS_ATOPTIONS = null;
+
+// Adsterra's Smartlink IS their Direct Link, the same product under two names, and it is
+// the one format that needs no registered website. It has NO visual component: it is a
+// bare URL that redirects whoever opens it to whatever offer pays best for their device
+// and country. So it cannot render in the slot the way a banner script does, and the only
+// honest use is a link a person chooses to click. Paste that URL here to show one.
+// If ADS_SCRIPT_URL is also set, the script format wins and this is ignored.
+//
+// Deliberately NOT done, and don't add it later: auto-redirecting, opening it on game
+// launch, popunders, or anything that sends a player to an offer they did not ask for.
+// That is hostile to the people using this, it is what gets a site reported and blocked
+// at school, and unsolicited redirects are against Adsterra's own publisher rules.
+// Expect a plain opt-in link to earn very little. That is the honest trade.
+const ADS_SMARTLINK_URL = '';
+
+let _adsMounted = false;
+function adsOn(){ try { return localStorage.getItem('n3_ads') !== '0'; } catch(e){ return true; } }
+function _adsScriptSet(){ return typeof ADS_SCRIPT_URL === 'string' && ADS_SCRIPT_URL.trim().length > 0; }
+function _adsLinkSet(){ return typeof ADS_SMARTLINK_URL === 'string' && ADS_SMARTLINK_URL.trim().length > 0; }
+function _adsConfigured(){ return _adsScriptSet() || _adsLinkSet(); }
+function setAds(on){
+  try { localStorage.setItem('n3_ads', on ? '1' : '0'); } catch(e){}
+  if (on) _mountAds(); else _unmountAds();
+  _renderAdsToggle();
+}
+function _renderAdsToggle(){
+  const btn = document.getElementById('adsToggle'), d = document.getElementById('adsDesc');
+  if (!btn) return;
+  const has = _adsConfigured();
+  btn.textContent = !has ? 'No ad code' : (adsOn() ? 'On' : 'Off');
+  btn.disabled = !has;
+  btn.style.opacity = has ? '' : '.5';
+  if (d) d.textContent = !has
+    ? 'Set ADS_SCRIPT_URL or ADS_SMARTLINK_URL in this file to enable this'
+    : (_adsScriptSet()
+        ? 'Runs your ad code on the home page only, never inside a game frame'
+        : 'Shows a sponsor link on the home page. Nothing opens unless someone clicks it.');
+}
+// Builds the script element directly rather than going through innerHTML, which never
+// executes a <script> anyway. atOptions has to be a real global before invoke.js runs,
+// because that is where Adsterra's loader reads the slot config from.
+function _mountAds(){
+  if (_adsMounted || !_adsConfigured() || !adsOn()) return;
+  const slot = document.getElementById('ad-slot');
+  if (!slot) return;
+  try {
+    slot.innerHTML = '<div class="ad-slot-tag">Advertisement</div>';
+    if (_adsScriptSet()){
+      if (ADS_ATOPTIONS && typeof ADS_ATOPTIONS === 'object') window.atOptions = ADS_ATOPTIONS;
+      const s = document.createElement('script');
+      s.type = 'text/javascript';
+      s.async = true;
+      s.src = ADS_SCRIPT_URL;
+      s.onerror = function(){
+        console.warn('[N3ptune] Ad script did not load. Expected on a network that blocks ad hosts, '
+          + 'or when the network has not verified this origin.');
+      };
+      slot.appendChild(s);
+      console.log('[N3ptune] Own ad code mounted on the home page.');
+    } else {
+      // Smartlink: a link, never an automatic navigation. rel keeps the opener away from
+      // N3ptune, and the label says plainly where it goes so nobody is tricked into it.
+      const a = document.createElement('a');
+      a.href = ADS_SMARTLINK_URL;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer sponsored';
+      a.textContent = 'Support N3ptune (opens a sponsor page)';
+      a.style.cssText = 'display:inline-flex;align-items:center;height:38px;padding:0 18px;'
+        + 'background:rgba(7,17,32,.92);border:1px solid rgba(96,165,250,.3);color:#e8f4ff;'
+        + 'font:600 13px Fredoka,sans-serif;border-radius:10px;text-decoration:none';
+      slot.appendChild(a);
+      console.log('[N3ptune] Sponsor link mounted on the home page.');
+    }
+    slot.style.display = 'flex';
+    _adsMounted = true;
+  } catch(e){
+    console.warn('[N3ptune] Ad mount failed', e);
+    slot.innerHTML = ''; slot.style.display = 'none';
+  }
+}
+// Clears the container. A page-level format that has already executed (popunder, social
+// bar) keeps running until a reload, so say so rather than pretending Off is instant.
+function _unmountAds(){
+  const slot = document.getElementById('ad-slot');
+  if (slot){ slot.innerHTML = ''; slot.style.display = 'none'; }
+  if (_adsMounted) console.log('[N3ptune] Ads off. A format that already loaded stops at the next reload.');
+  _adsMounted = false;
+}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+//  LOCAL MODE - play saved games with the network switched off
+//
+//  Two halves, and they are independent:
+//    1. SAVING. While online, a game's fetched HTML is stored in IndexedDB (db
+//       `n3_local`, store `games`) together with its cover as a data URL. Covers are
+//       fetched once at save time and skipped past ~1.5 MB, because GN covers average
+//       ~810 KB and some reach 8 MB.
+//    2. LOCAL MODE. A switch that serves those saved games and stops the page talking to
+//       the network at all.
+//
+//  "No requests will be sent out" is enforced in two places, deliberately:
+//    - In the PARENT, by replacing fetch / XHR / sendBeacon / WebSocket / EventSource
+//      with rejecting stubs, skipping every loader, and killing the 60s key recheck
+//      (which was an outbound request every minute).
+//    - In the GAME FRAME, by a `<meta http-equiv="Content-Security-Policy">` with
+//      `default-src 'none'; connect-src 'none'`. That one matters most: it is enforced by
+//      the BROWSER, not by our JavaScript, so a game cannot patch its way around it the
+//      way it could around a monkey-patched fetch.
+//
+//  A game is only truly offline-safe if it is self-contained. `_locSelfContained()`
+//  checks for an external <base> and for script/link refs that would need the CDN, and
+//  the result is stored per game so the UI can be honest about which ones may not run.
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+const LOC_DB = 'n3_local', LOC_STORE = 'games', LOC_COVER_MAX = 1500000;
+let _locDBP = null;
+let localGames = [];            // saved-game records, shaped like any other source
+let _netLocked = false;
+
+function _locOpen(){
+  if (_locDBP) return _locDBP;
+  _locDBP = new Promise((res, rej) => {
+    const r = indexedDB.open(LOC_DB, 1);
+    r.onupgradeneeded = () => { const d = r.result;
+      if (!d.objectStoreNames.contains(LOC_STORE)) d.createObjectStore(LOC_STORE, { keyPath:'key' }); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return _locDBP;
+}
+function _locTx(mode){ return _locOpen().then(d => d.transaction(LOC_STORE, mode).objectStore(LOC_STORE)); }
+function _locReq(req){ return new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); }); }
+async function _locPut(rec){ return _locReq((await _locTx('readwrite')).put(rec)); }
+async function _locGet(key){ try { return await _locReq((await _locTx('readonly')).get(key)); } catch(e){ return null; } }
+async function _locDel(key){ return _locReq((await _locTx('readwrite')).delete(key)); }
+async function _locAll(){ try { return (await _locReq((await _locTx('readonly')).getAll())) || []; } catch(e){ return []; } }
+async function _locClear(){ return _locReq((await _locTx('readwrite')).clear()); }
+
+// Does this page need the network to run? An external <base>, or a script/stylesheet
+// reference that is not inline and not a data: URI, means it does.
+// jsDelivr answers a miss or an over-limit package with a SHORT PLAIN-TEXT body, not an
+// HTTP error page with markup. It has no tags at all, so a naive scan calls it
+// "self-contained" and Local Mode would cheerfully store an error message as a game.
+// Caught in testing: UGS "Tap Road" is 136 bytes of "Package size exceeded".
+const LOC_CDN_ERR = /^\s*(Package size exceeded|Couldn.t find the requested file|File size exceeded)/i;
+
+function _locSelfContained(html){
+  if (LOC_CDN_ERR.test(html)) return false;
+  if (/<base\s[^>]*href=["']?https?:/i.test(html)) return false;
+  const refs = html.match(/<(?:script|link|img)\s[^>]*(?:src|href)=["']([^"']+)["']/gi) || [];
+  for (const r of refs){
+    const m = /(?:src|href)=["']([^"']+)["']/i.exec(r);
+    if (!m) continue;
+    const u = m[1].trim();
+    if (!u || /^(data:|blob:|#|javascript:)/i.test(u)) continue;
+    return false;                       // a real URL or a relative path: needs the network
+  }
+  return true;
+}
+
+function localOn(){ try { return localStorage.getItem('n3_local_mode') === '1'; } catch(e){ return false; } }
+
+// Replace every outbound API with a rejecting stub. One-way for the page's lifetime: the
+// honest way to undo it is a reload, which setLocalMode() does.
+function _netLock(){
+  if (_netLocked) return; _netLocked = true;
+  if (window.__n3LocalLocked){      // the <head> early lock already did all of this
+    console.log('[N3ptune] Local Mode: network already locked in <head>, before anything loaded.');
+    return;
+  }
+  const no = (what) => { const e = new Error('N3ptune Local Mode: ' + what + ' blocked (offline by choice)'); e.name = 'LocalModeBlocked'; return e; };
+  try { window.fetch = function(){ return Promise.reject(no('fetch')); }; } catch(e){}
+  try {
+    XMLHttpRequest.prototype.open = function(){ throw no('XMLHttpRequest'); };
+    XMLHttpRequest.prototype.send = function(){ throw no('XMLHttpRequest'); };
+  } catch(e){}
+  try { navigator.sendBeacon = function(){ return false; }; } catch(e){}
+  try { window.WebSocket = function(){ throw no('WebSocket'); }; } catch(e){}
+  try { window.EventSource = function(){ throw no('EventSource'); }; } catch(e){}
+  console.log('[N3ptune] Local Mode: network locked. fetch, XHR, sendBeacon, WebSocket and '
+    + 'EventSource now reject, loaders are skipped, and the key recheck is stopped.');
+}
+
+async function setLocalMode(on){
+  try { localStorage.setItem('n3_local_mode', on ? '1' : '0'); } catch(e){}
+  // A reload is the honest way to apply it: turning the lock OFF cannot un-patch the
+  // globals, and turning it ON mid-session leaves half-loaded remote state around.
+  location.reload();
+}
+
+// Saved records become ordinary game objects, with the cover as a stored data URL so
+// nothing has to be fetched to paint the grid.
+function _locToGames(recs){
+  return (recs || []).map(r => ({
+    _src: r.src || 'misc', _lib: r.lib || null, _key: r.key, _id: r.id || r.key,
+    _local: true, _partial: !r.selfContained,
+    name: r.name, cover: r.cover || null, url: r.url || null,
+    tags: [], featured: false,
+  })).sort((a,b) => a.name.localeCompare(b.name));
+}
+async function _locRefresh(){
+  localGames = _locToGames(await _locAll());
+  return localGames;
+}
+
+// Save the game that is open right now. `html` is the RAW fetched page, before our
+// injections, so the shims stay current when it is replayed later.
+async function saveOffline(key, html, game){
+  const g = game || findByKey(key);
+  if (!g || !html) return { ok:false, why:'nothing to save' };
+  // Never store a CDN error body as if it were a game.
+  if (LOC_CDN_ERR.test(html) || html.length < 200)
+    return { ok:false, why:'that is a CDN error page, not the game' };
+  let cover = null;
+  if (g.cover && !localOn()){
+    try {
+      const r = await fetch(g.cover, { signal: AbortSignal.timeout(15000) });
+      if (r.ok){
+        const blob = await r.blob();
+        if (blob.size <= LOC_COVER_MAX){
+          cover = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(blob); });
+        }
+      }
+    } catch(e){}
+  }
+  const selfContained = _locSelfContained(html);
+  await _locPut({ key, id:g._id, name:g.name, src:g._src, lib:g._lib || null,
+                  url:g.url || null, html, cover, selfContained,
+                  size: html.length, savedAt: Date.now() });
+  await _locRefresh();
+  return { ok:true, selfContained };
+}
+async function removeOffline(key){ await _locDel(key); await _locRefresh(); }
+async function isSavedOffline(key){ return !!(await _locGet(key)); }
+
+async function localStats(){
+  const all = await _locAll();
+  let bytes = 0, partial = 0;
+  all.forEach(r => { bytes += (r.size || 0) + (r.cover ? r.cover.length : 0); if (!r.selfContained) partial++; });
+  let quota = null;
+  try { if (navigator.storage && navigator.storage.estimate && !localOn()){
+    const e = await navigator.storage.estimate(); quota = e && e.quota ? e.quota : null; } } catch(e){}
+  return { count: all.length, bytes, partial, quota };
+}
+// showToast(), showMsg() and flash() are all local to other scopes, so this is the one
+// notifier Local Mode can actually call from anywhere.
+async function renderLocalSettings(){
+  const btn = document.getElementById('localToggle'), st = document.getElementById('localStats');
+  if (btn){
+    btn.textContent = localOn() ? 'On' : 'Off';
+    btn.classList.toggle('pri', localOn());
+  }
+  if (!st) return;
+  try {
+    const s = await localStats();
+    if (!s.count){
+      st.textContent = localOn()
+        ? 'Nothing saved. Turn Local Mode off while you have a connection, open a game and press "Save offline".'
+        : 'None yet. Open a game and press "Save offline" in the player.';
+    } else {
+      st.textContent = s.count + ' game' + (s.count === 1 ? '' : 's') + ', ' + _fmtBytes(s.bytes)
+        + (s.partial ? ' (' + s.partial + ' may need online files)' : '')
+        + (s.quota ? ' of about ' + _fmtBytes(s.quota) + ' available' : '');
+    }
+  } catch(e){ st.textContent = 'Could not read the offline store.'; }
+}
+async function clearLocalGames(){
+  const s = await localStats();
+  if (!s.count){ _locToast('Nothing saved yet'); return; }
+  if (!confirm('Delete all ' + s.count + ' saved offline game' + (s.count === 1 ? '' : 's') + '? This frees '
+    + _fmtBytes(s.bytes) + ' and cannot be undone.')) return;
+  await _locClear();
+  await _locRefresh();
+  await renderLocalSettings();
+  if (localOn()){ render(); renderHome(); }
+  _locToast('Offline games cleared');
+}
+
+function _locToast(text){
+  let t = document.getElementById('n3-loc-toast');
+  if (!t){
+    t = document.createElement('div');
+    t.id = 'n3-loc-toast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:2147483000;'
+      + 'max-width:min(520px,92vw);padding:11px 18px;background:rgba(7,17,32,.96);color:#e8f4ff;'
+      + 'border:1px solid rgba(96,165,250,.3);border-radius:12px;font:600 13px Fredoka,sans-serif;'
+      + 'box-shadow:0 14px 40px rgba(0,0,0,.5);opacity:0;transition:opacity .25s;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.style.opacity = '1';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = '0'; }, 3400);
+}
+const _fmtBytes = n => n < 1024 ? n + ' B'
+  : n < 1048576 ? (n/1024).toFixed(0) + ' KB'
+  : (n/1048576).toFixed(1) + ' MB';
+
+// \u2500\u2500 PAGE NAVIGATION \u2500\u2500
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
@@ -5341,6 +6273,8 @@ function showPage(name) {
   if(name==='home'){
     topbar.style.display='none';
     renderHome();
+  } else if(name==='settings'){
+    try { renderLocalSettings(); } catch(e){}
   } else if(name==='games'){
     topbar.style.display='none'; // games page has its own built-in topbar
     render();
