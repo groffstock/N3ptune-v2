@@ -564,6 +564,7 @@ body{
 .tc-cluster{position:absolute;transform:translate(-50%,-50%);display:grid;grid-template-columns:repeat(3,54px);
   grid-template-rows:repeat(2,54px);gap:6px;background:none;border:0;pointer-events:none}
 .tc-cluster .tc-key{position:relative;left:auto;top:auto;transform:none;width:54px;height:54px;font-size:15px;
+  display:flex;align-items:center;justify-content:center;
   border-radius:13px;pointer-events:auto}
 .tc-cluster .tc-key:active,.tc-cluster .tc-key.held{transform:scale(.94)}
 .tc-cluster .tc-key.up{grid-area:1/2}.tc-cluster .tc-key.left{grid-area:2/1}
@@ -971,7 +972,7 @@ button,a,.pc-key,.pbtn,.s-btn,.gcard,.hcard,.src-filter-btn,.sb-item,
       <button class="pc-key" onclick="pcAdd('9')">9</button>
       <span></span>
       <button class="pc-key" onclick="pcAdd('0')">0</button>
-      <button class="pc-key pc-back" onclick="pcDel()" aria-label="Delete">&#9003;</button>
+      <button class="pc-key pc-back" onclick="pcDel()" aria-label="Delete"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 12.59L17.59 17 14 13.41 10.41 17 9 15.59 12.59 12 9 8.41 10.41 7 14 10.59 17.59 7 19 8.41 15.41 12 19 15.59z"/></svg></button>
     </div>
 
 
@@ -3881,7 +3882,8 @@ function _pushLog(prefix, level, args){
       catch(_){ return String(a); }
     });
     _glogBuf.push(prefix + ' [' + level + '] ' + parts.join(' '));
-    if(_glogBuf.length > 3000) _glogBuf.shift();
+    // Trim in blocks: shift() per line is O(n) on a 3000-entry array, for nothing.
+    if(_glogBuf.length > 3000) _glogBuf.splice(0, 500);
   }catch(e){}
 }
 function glog(level, ...args){
@@ -4001,12 +4003,27 @@ function _showLogFallback(text){
 // + errors to the parent via postMessage. Self-contained (survives .toString()).
 function _gameLogShim(tag){
   function shim(TAG){
+    // HARD CAP, because this is a per-console-call cost inside a running game. A game
+    // that logs in its render loop was posting ~60 messages a second, each argument
+    // JSON.stringify'd here and stringified again in the parent: a measurable frame-rate
+    // hit for logs nobody reads past the first few hundred. After the cap it says so
+    // once and goes quiet; the game keeps its own console untouched either way.
+    var nSent = 0, MAXLOG = 400, ARGMAX = 600;
     function send(level, args){
+      if (nSent > MAXLOG) return;
+      nSent++;
+      if (nSent > MAXLOG){
+        try{ parent.postMessage({__n3game:1, tag:TAG, level:'log',
+          args:['[N3ptune] log relay muted after ' + MAXLOG + ' lines to keep the game smooth. '
+              + 'The game\'s own console is unaffected.']}, '*'); }catch(e){}
+        return;
+      }
       try{
         var out=[];
         for(var i=0;i<args.length;i++){ var a=args[i];
           try{ out.push(a && a.stack ? a.stack : (typeof a==='object' ? JSON.stringify(a) : String(a))); }
           catch(_){ out.push(String(a)); } }
+        for(var k=0;k<out.length;k++) if(out[k] && out[k].length > ARGMAX) out[k] = out[k].slice(0, ARGMAX) + '\u2026';
         parent.postMessage({__n3game:1, tag:TAG, level:level, args:out}, '*');
       }catch(e){}
     }
@@ -4015,7 +4032,7 @@ function _gameLogShim(tag){
     // blocked, CSP, offline) and the game is completely fine without them, so we
     // log them as harmless info, NOT as errors - otherwise every launch looks
     // broken (e.g. cdn.r9x.in/ailogic_gn-math.dev_obf.js on GN-Math games).
-    var NONFATAL = /(?:r9x\.in|ailogic|doubleclick|googlesyndication|googletagmanager|google-analytics|googletagservices|adservice|gampad|adsbygoogle|pagead|securepubads|imasdk|ima3|firebaseio|firebaseinstallations|crazygames|poki|gamemonetize|gamedistribution|onesignal|clarity\.ms|hotjar|cloudflareinsights|sentry|scorecardresearch|adsbygoogle|adsLoader|SDK_ERROR|Ads SDK|monetize|connect\.facebook\.net|fbevents|facebook\.com\/tr|wgplayer|quantserve|moatads|amplitude|mixpanel|segment\.(?:io|com)|tiktok|snapchat|bing\.com\/bat|mc\.yandex|matomo|piwik|plausible|fullstory|logrocket|newrelic|nr-data)/i;
+    var NONFATAL = /(?:google\.com\/jsapi|gstatic\.com\/charts|r9x\.in|ailogic|doubleclick|googlesyndication|googletagmanager|google-analytics|googletagservices|adservice|gampad|adsbygoogle|pagead|securepubads|imasdk|ima3|firebaseio|firebaseinstallations|crazygames|poki|gamemonetize|gamedistribution|onesignal|clarity\.ms|hotjar|cloudflareinsights|sentry|scorecardresearch|adsbygoogle|adsLoader|SDK_ERROR|Ads SDK|monetize|connect\.facebook\.net|fbevents|facebook\.com\/tr|wgplayer|quantserve|moatads|amplitude|mixpanel|segment\.(?:io|com)|tiktok|snapchat|bing\.com\/bat|mc\.yandex|matomo|piwik|plausible|fullstory|logrocket|newrelic|nr-data)/i;
     ['log','info','warn','error','debug'].forEach(function(m){
       var o = console[m] ? console[m].bind(console) : function(){};
       console[m] = function(){
@@ -4076,65 +4093,67 @@ function _gameLogShim(tag){
 function _locCaptureShim(){
   function shim(QUIET){
     try{
-      var sent = {}, last = Date.now(), loaded = false, told = false, inflight = 0;
+      var sent = {}, pend = {}, nPend = 0, last = Date.now(), loaded = false, told = false;
+      function norm(u){ try{ return new URL(u, document.baseURI).href; }catch(e){ return String(u); } }
       function note(u){
         if (!u || typeof u !== 'string') return;
-        if (sent[u]) return;
         if (/^(data:|blob:|about:|javascript:)/i.test(u)) return;
+        if (sent[u]) return;
         sent[u] = 1; last = Date.now(); told = false;
         try{ parent.postMessage({ __n3res:1, urls:[u] }, '*'); }catch(e){}
       }
-      function abs(u){ try{ return new URL(u, document.baseURI).href; }catch(e){ return String(u); } }
-      function take(list){ for (var i = 0; i < list.length; i++){ var e = list[i]; note(e && (e.name || e)); } }
+      // One in-flight slot per request, released exactly once.
+      function begin(u){
+        note(u); nPend++;
+        var done = false;
+        var rel = function(){ if (done) return; done = true; nPend--; last = Date.now(); told = false; };
+        (pend[u] = pend[u] || []).push(rel);
+        setTimeout(rel, 60000);        // never leak a slot on a request that vanishes
+        return rel;
+      }
+      function release(u){ var a = pend[u]; if (a && a.length){ (a.shift())(); if (!a.length) delete pend[u]; } }
+      // The resource timeline is what tells us a request FINISHED, body included. That is
+      // why nothing here reads a response: an earlier version drained a clone of every
+      // fetch to detect completion, which meant every online game read all of its own
+      // assets TWICE (50 MB extra on a Unity build) and was a real source of lag.
+      function take(list){
+        for (var i = 0; i < list.length; i++){
+          var e = list[i], n = e && (e.name || e);
+          if (!n) continue;
+          n = norm(n); note(n); release(n);
+        }
+      }
       try{ take(performance.getEntriesByType('resource')); }catch(e){}
       try{ new PerformanceObserver(function(l){ take(l.getEntries()); }).observe({ type:'resource', buffered:true }); }catch(e){}
-      // fetch: record at request time, and hold "settled" off until it lands.
       try{
         var _f = window.fetch;
-        if (_f) window.fetch = function(input, init){
-          var u = (input && input.url) ? input.url : String(input);
-          note(abs(u)); inflight++;
-          var done = function(){ inflight--; last = Date.now(); told = false; };
-          var pr;
-          try{ pr = _f.apply(window, arguments); }catch(e){ done(); throw e; }
-          return pr.then(function(r){
-            // Wait for the BODY, not just the headers: a 50 MB response resolves its
-            // headers at once and then streams for seconds, and that gap is exactly what
-            // the first version mistook for the game having finished loading.
-            // The clone is DRAINED and discarded rather than buffered with arrayBuffer(),
-            // which would hold a second full copy of every file in memory.
-            try{
-              if (r && r.body && r.clone){
-                var rd = r.clone().body.getReader();
-                (function pump(){ rd.read().then(function(s){ s.done ? done() : pump(); }, done); })();
-                return r;
-              }
-            }catch(e){}
-            done(); return r;
-          }, function(e){ done(); throw e; });
+        if (_f) window.fetch = function(input){
+          var u = norm((input && input.url) ? input.url : String(input));
+          if (/^(data:|blob:)/i.test(u)) return _f.apply(window, arguments);
+          var rel = begin(u), pr;
+          try{ pr = _f.apply(window, arguments); }catch(e){ rel(); throw e; }
+          // Resolved headers are NOT the end of the body, so the slot is left for the
+          // resource timeline to release. Only a rejection releases it here.
+          return pr.then(function(r){ return r; }, function(e){ rel(); throw e; });
         };
       }catch(e){}
-      // XHR: same idea. open() records, send() counts, loadend releases.
       try{
         var _o = XMLHttpRequest.prototype.open, _s = XMLHttpRequest.prototype.send;
         XMLHttpRequest.prototype.open = function(m, u){
-          try{ this.__n3u = abs(u); note(this.__n3u); }catch(e){}
+          try{ this.__n3u = norm(u); note(this.__n3u); }catch(e){}
           return _o.apply(this, arguments);
         };
         XMLHttpRequest.prototype.send = function(){
-          var x = this, rel = false;
-          var done = function(){ if (rel) return; rel = true; inflight--; last = Date.now(); told = false; };
-          inflight++;
-          try{ x.addEventListener('loadend', done); }catch(e){}
-          setTimeout(done, 120000);          // never leak a counter on a hung request
-          try{ return _s.apply(this, arguments); }catch(e){ done(); throw e; }
+          var rel = begin(this.__n3u || norm('')); // loadend is cheap and exact for XHR
+          try{ this.addEventListener('loadend', rel); }catch(e){}
+          try{ return _s.apply(this, arguments); }catch(e){ rel(); throw e; }
         };
       }catch(e){}
       addEventListener('load', function(e){ if (e.target === window || e.target === document) loaded = true; }, true);
       // Some engines never fire window load, because they keep audio or a socket open.
       setTimeout(function(){ loaded = true; }, 12000);
-      setInterval(function(){
-        if (loaded && !told && inflight <= 0 && Date.now() - last > QUIET){
+      var tick = setInterval(function(){
+        if (loaded && !told && nPend <= 0 && Date.now() - last > QUIET){
           told = true;
           try{ parent.postMessage({ __n3res:1, settled:1, n:Object.keys(sent).length }, '*'); }catch(e){}
         }
@@ -4532,6 +4551,11 @@ async function launch(key) {
   document.getElementById('pload').classList.remove('gone');
   document.getElementById('pload').classList.remove('notice');
   try { renderLocalInfo(); } catch(e){}
+  // Set the Download button state HERE, before the per-source branches. The LuminSDK and
+  // Zen GS branches return without ever reaching the srcdoc path that used to call this,
+  // so the button kept the previous game state and still offered a download that could
+  // never happen (the Driven Wild report).
+  _syncSaveBtn(key);
   const frame=document.getElementById('gframe');
 
   // ── Lumin: a hosted page on a.luminsdk.com behind a signed, short-lived URL.
@@ -4785,7 +4809,7 @@ async function launch(key) {
     // would render the raw code. Surface an error and keep the "New Tab" path.
     glog('error', 'load FAILED:', e.message||e);
     const ltxt = document.getElementById('ltxt');
-    if (ltxt) ltxt.textContent = 'Couldn’t load '+g.name+'. Try the New Tab button ↗';
+    if (ltxt) ltxt.textContent = 'Couldn’t load '+g.name+'. Try the New Tab button at the top.';
     const sab = document.getElementById('showAnywayBtn');
     if (sab) sab.style.display='none';
     clearTimeout(window._showAnywayTimer);
@@ -4835,6 +4859,18 @@ async function _syncSaveBtn(key){
   const now = document.getElementById('saveNowBtn');
   if (!btn) return;
   if (localOn()){ btn.style.display = 'none'; if (now) now.style.display = 'none'; return; }
+  // A hosted, cross-origin source can never be downloaded. Show the button disabled with
+  // the reason, rather than greyed for ever on a game that has finished loading.
+  const _g = findByKey(key);
+  if (!_locCanSave(_g)){
+    btn.style.display = '';
+    btn.disabled = true;
+    btn.classList.remove('pri');
+    btn.textContent = 'Cannot download';
+    btn.title = _locWhyNoSave(_g);
+    if (now) now.style.display = 'none';
+    return;
+  }
   btn.style.display = '';
   if (_locSaving){ if (now) now.style.display = 'none'; return; }   // leave the progress text alone
   const rec = await _locGet(key);
@@ -4877,6 +4913,8 @@ async function toggleSaveOffline(){
   const btn = document.getElementById('saveOfflineBtn');
   if (!btn || !activeGame || !activeGame.key) return;
   const key = activeGame.key;
+  const _g0 = findByKey(key);
+  if (!_locCanSave(_g0)){ _locToast(_locWhyNoSave(_g0)); return; }
   if (await _locGet(key)){
     await removeOffline(key);
     await _syncSaveBtn(key);
@@ -4898,8 +4936,9 @@ async function toggleSaveOffline(){
       const got = r.assets ? r.assets + ' file' + (r.assets === 1 ? '' : 's') + ' and the page' : 'the page';
       _locToast(r.selfContained
         ? 'Downloaded ' + got + (r.bytes ? ', ' + _fmtBytes(r.bytes) : '') + '. It will work in N3ptune Local'
-        : 'Downloaded ' + got + ', but ' + (r.failed + r.capped) + ' could not be saved'
-          + (r.capped ? ' (some were too big)' : '') + ', so parts of it may not run offline');
+        : 'Downloaded ' + got + ', but ' + (r.failed + r.capped) + ' file'
+          + ((r.failed + r.capped) === 1 ? '' : 's') + ' could not be saved'
+          + (r.capped ? ' (too big)' : '') + ', so parts of it may not run offline');
     }
     renderLocalInfo();
   } catch(e){
@@ -5070,8 +5109,11 @@ function tcRender(){
   if (cfg.stick.mode === 'keys'){
     // Four pads in the joystick's spot, laid out like the keys really are.
     html = '<div class="tc-cluster" id="tcStick">';
-    [['up','▲'],['left','◀'],['down','▼'],['right','▶']].forEach(d => {
-      html += '<div class="tc-pad tc-key ' + d[0] + '" data-dir="' + d[0] + '" style="' + bg + '">' + d[1] + '</div>';
+    [['up','0,-7 7,5 -7,5'],['left','-7,0 5,-7 5,7'],
+     ['down','0,7 -7,-5 7,-5'],['right','7,0 -5,7 -5,-7']].forEach(d => {
+      html += '<div class="tc-pad tc-key ' + d[0] + '" data-dir="' + d[0] + '" style="' + bg + '">'
+            + '<svg viewBox="-12 -12 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">'
+            + '<polygon points="' + d[1] + '"/></svg></div>';
     });
     html += '</div>';
   } else {
@@ -6435,12 +6477,26 @@ const LOC_FILE_MAX = 60 * 1024 * 1024;    // one file; past this it is almost ce
 // already treats as harmless, plus our own origin. Downloading them would waste the
 // budget on things the game does not need, and they are exactly what fails offline
 // anyway. Kept in step with NONFATAL in _gameLogShim.
-const LOC_SKIP_RES = /(?:r9x\.in|ailogic|doubleclick|googlesyndication|googletagmanager|google-analytics|googletagservices|adservice|gampad|adsbygoogle|pagead|securepubads|imasdk|ima3|firebaseio|firebaseinstallations|crazygames|poki|gamemonetize|gamedistribution|onesignal|clarity\.ms|hotjar|cloudflareinsights|sentry|scorecardresearch|monetize|connect\.facebook\.net|fbevents|facebook\.com\/tr|wgplayer|quantserve|moatads|amplitude|mixpanel|segment\.(?:io|com)|tiktok|snapchat|bing\.com\/bat|mc\.yandex|matomo|piwik|plausible|fullstory|logrocket|newrelic|nr-data|fonts\.googleapis|fonts\.gstatic)/i;
+const LOC_SKIP_RES = /(?:google\.com\/jsapi|gstatic\.com\/charts|r9x\.in|ailogic|doubleclick|googlesyndication|googletagmanager|google-analytics|googletagservices|adservice|gampad|adsbygoogle|pagead|securepubads|imasdk|ima3|firebaseio|firebaseinstallations|crazygames|poki|gamemonetize|gamedistribution|onesignal|clarity\.ms|hotjar|cloudflareinsights|sentry|scorecardresearch|monetize|connect\.facebook\.net|fbevents|facebook\.com\/tr|wgplayer|quantserve|moatads|amplitude|mixpanel|segment\.(?:io|com)|tiktok|snapchat|bing\.com\/bat|mc\.yandex|matomo|piwik|plausible|fullstory|logrocket|newrelic|nr-data|fonts\.googleapis|fonts\.gstatic)/i;
 
 // A stored file is keyed by its CDN PATH, not its full URL. The mirror can change
 // between the save and the replay (resolveCdn picks the fastest at load time), and a
 // full-URL key would miss every time that happened. Same rule as the relative paths
 // in the UGS, Noah and Misc caches.
+// LuminSDK and Zen GS are genuinely cross-origin: launch() points frame.src straight at
+// their own host, so we never fetch the page, no shim is injected, `activeGame.rawHtml` is
+// never set and the capture shim never runs. The Download button therefore sat greyed at
+// "Loading files..." for ever, and clicking the override answered "Still loading, try
+// again in a moment" on a game that had plainly finished loading. Reported for Driven Wild
+// on Zen GS. There is nothing to fix in the loader: these games cannot be stored at all,
+// so say so instead of pretending the button will light up.
+const LOC_NO_SAVE = { luminsdk:'LuminSDK', zengs:'Zen GS' };
+function _locCanSave(g){ return !!g && !LOC_NO_SAVE[g._src]; }
+function _locWhyNoSave(g){
+  const n = g && LOC_NO_SAVE[g._src];
+  return n ? n + ' streams its games from its own servers, so this one cannot be kept on your device.' : '';
+}
+
 function _locResKey(u){
   try {
     const x = new URL(u, location.href);
@@ -6469,7 +6525,12 @@ function _locReq(req){ return new Promise((res, rej) => { req.onsuccess = () => 
 async function _locPut(rec){ return _locReq((await _locTx('readwrite')).put(rec)); }
 async function _locGet(key){ try { return await _locReq((await _locTx('readonly')).get(key)); } catch(e){ return null; } }
 async function _locDel(key){ return _locReq((await _locTx('readwrite')).delete(key)); }
-async function _locAll(){ try { return (await _locReq((await _locTx('readonly')).getAll())) || []; } catch(e){ return []; } }
+// The app's own stored copy shares this store (see SHELL_REC), so every reader has to
+// skip it or it would be painted as a game and counted in the storage figures.
+async function _locAll(){
+  try { return ((await _locReq((await _locTx('readonly')).getAll())) || []).filter(r => r && !r._shell && r.key !== SHELL_REC); }
+  catch(e){ return []; }
+}
 async function _locClear(){ return _locReq((await _locTx('readwrite')).clear()); }
 
 // Does this page need the network to run? An external <base>, or a script/stylesheet
@@ -6646,7 +6707,8 @@ async function _locRefresh(){
 // would add a third again to every file for nothing.
 async function _locFetchAssets(urls, onStep){
   const files = {};
-  let bytes = 0, ok = 0, failed = 0, skipped = 0, capped = 0;
+  let bytes = 0, ok = 0, failed = 0, skipped = 0, capped = 0, missing = 0;
+  const why = [];
   const list = Array.from(new Set(urls || []));
   for (let i = 0; i < list.length; i++){
     const u = list[i];
@@ -6657,15 +6719,26 @@ async function _locFetchAssets(urls, onStep){
     try { if (new URL(u, location.href).origin === location.origin) { skipped++; continue; } } catch(e){}
     try {
       const r = await fetch(u, { signal: AbortSignal.timeout(45000) });
-      if (!r.ok){ failed++; continue; }
+      // A 4xx/5xx means the file does not exist for ANYONE, so the game did not have it
+      // while it was running online either and offline loses nothing. Counting these as
+      // failures was why so many perfectly offline-capable games claimed they "need some
+      // online files": games routinely request a favicon, an optional sound or a
+      // leaderboard endpoint that simply is not there.
+      if (!r.ok){ missing++; why.push(r.status + ' ' + u); continue; }
       const buf = await r.arrayBuffer();
-      if (buf.byteLength > LOC_FILE_MAX || bytes + buf.byteLength > LOC_GAME_MAX){ capped++; continue; }
-      const txt = buf.byteLength < 4000 ? null : undefined;
+      if (buf.byteLength > LOC_FILE_MAX || bytes + buf.byteLength > LOC_GAME_MAX){ capped++; why.push('too big ' + u); continue; }
       files[_locResKey(u)] = { u8: new Uint8Array(buf), t: r.headers.get('content-type') || '' };
       bytes += buf.byteLength; ok++;
-    } catch(e){ failed++; }
+    } catch(e){
+      // A thrown fetch is the real gap: CORS, a dead host, a timeout. The game got the
+      // bytes through a tag that needs no CORS, and we cannot.
+      failed++; why.push(((e && e.name) || 'error') + ' ' + u);
+    }
   }
-  return { files, bytes, ok, failed, skipped, capped };
+  if (why.length) console.log('[N3ptune] offline download: ' + ok + ' stored, ' + missing
+    + ' not on the server (harmless), ' + failed + ' unreachable, ' + capped + ' too big\n  '
+    + why.slice(0, 25).join('\n  '));
+  return { files, bytes, ok, failed, skipped, capped, missing };
 }
 
 // Save the game that is open right now. `html` is the RAW fetched page, before our
@@ -6690,6 +6763,7 @@ async function saveOffline(key, html, game, urls, onStep){
     } catch(e){}
   }
   const a = await _locFetchAssets(urls, onStep);
+  if (!_locCanSave(g)) return { ok:false, why:_locWhyNoSave(g) };
   // "Will it run offline?" is now answered by whether we got its files, not by a scan
   // of the HTML. A page that references nothing is still fine on the static check; a
   // page whose files all downloaded is fine too. Anything that failed is a real gap.
@@ -6700,7 +6774,8 @@ async function saveOffline(key, html, game, urls, onStep){
                   assetBytes: a.bytes, base: _locBaseFor(g),
                   size: html.length, savedAt: Date.now() });
   await _locRefresh();
-  return { ok:true, selfContained, assets:a.ok, failed:a.failed, capped:a.capped, bytes:a.bytes };
+  return { ok:true, selfContained, assets:a.ok, failed:a.failed, capped:a.capped,
+           missing:a.missing, bytes:a.bytes };
 }
 // The <base> the game ran with, stored so the replay resolves relative URLs the same
 // way. Kept as a PATH for the same mirror-independence reason as the file keys.
@@ -6757,16 +6832,15 @@ async function renderLocalSettings(){
     }
   }
   if (shs){
-    const sh = shellInfo();
-    shs.textContent = sh.noStore
-      ? 'This launcher has no storage of its own, so N3ptune Local cannot start here. Use the bookmarklet or run it from N3ptune.bat.'
-      : sh.saved
-        ? 'A copy of N3ptune itself is on your device (' + _fmtBytes(sh.size) + ', saved '
-          + _agoText(sh.at) + '), so it can start even when every mirror is blocked.'
-        : (_shellErr || 'Not downloaded yet. Without it N3ptune Local cannot start on its own.');
+    const sh = await shellInfoAsync();
+    shs.textContent = sh.saved
+      ? 'A copy of N3ptune itself is on your device (' + _fmtBytes(sh.size) + ', saved '
+        + _agoText(sh.at) + (sh.where === 'idb' ? ', in offline storage' : '')
+        + '), so it can start even when every mirror is blocked.'
+      : (_shellErr || 'Not downloaded yet. Without it N3ptune Local cannot start on its own.');
     if (shb){
       shb.textContent = sh.saved ? 'Refresh' : 'Download';
-      shb.disabled = !!sh.noStore || localOn();
+      shb.disabled = localOn();
     }
   }
 }
@@ -6801,27 +6875,58 @@ async function clearLocalGames(){
 //  bookmarklet and a served copy (N3ptune.bat) both can.
 const SHELL_PATH = 'gh/groffstock/N3ptune-v2@main/n3ptune-v2.html';
 const SHELL_KEY = 'n3_shell', SHELL_AT = 'n3_shell_at';
+const SHELL_REC = '__shell';    // its row in the SAME IndexedDB store the games use
 const SHELL_TTL = 86400000;     // refresh at most once a day
 const SHELL_MIN = 120000;       // a real copy of this app is far bigger than this
-let _shellBusy = false, _shellErr = '';
+let _shellBusy = false, _shellErr = '', _shellWhere = '';
+let _shellMem = null;           // what this session stored, so Settings is right at once
 
+// iOS was re-downloading the app on EVERY bookmarklet launch and could never start
+// offline. The cause was the store, not the download: this is ~370 KB of text, and
+// localStorage on iOS Safari is a ~5 MB per-origin budget counted in UTF-16, which the
+// app's own list caches (gn_zones ~200 KB, ugs ~319 KB, nine misc caches) already eat
+// into - and under the bookmarklet that budget belongs to whatever HOST page you ran it
+// on, which has its own data in there. setItem then throws QuotaExceededError, the save
+// silently never happened, and nothing was there to boot from. Private Browsing refuses
+// it outright. So IndexedDB is the real store now (far larger quota, and it is where the
+// downloaded games already live), with localStorage still attempted because the
+// bookmarklet can read it synchronously.
+async function _shellPut(txt){
+  let idb = false, ls = false;
+  try { await _locPut({ key:SHELL_REC, html:txt, savedAt:Date.now(), _shell:true }); idb = true; } catch(e){}
+  try { localStorage.setItem(SHELL_KEY, txt); localStorage.setItem(SHELL_AT, String(Date.now())); ls = true; } catch(e){}
+  if (!idb && !ls) return '';
+  return idb && ls ? 'both' : idb ? 'idb' : 'localStorage';
+}
+// Synchronous best guess, for callers that cannot await (Settings paints with this and
+// then refreshes once shellInfoAsync resolves).
 function shellInfo(){
+  if (_shellMem) return _shellMem;
   try {
     const h = localStorage.getItem(SHELL_KEY);
-    if (!h) return { saved:false };
-    return { saved:true, size:h.length, at:+(localStorage.getItem(SHELL_AT) || 0) };
+    if (h) return { saved:true, size:h.length, at:+(localStorage.getItem(SHELL_AT) || 0), where:'localStorage' };
   } catch(e){ return { saved:false, noStore:true }; }
+  return { saved:false };
+}
+async function shellInfoAsync(){
+  const ls = shellInfo();
+  if (ls.saved) return ls;
+  try {
+    const r = await _locGet(SHELL_REC);
+    if (r && r.html) return { saved:true, size:r.html.length, at:r.savedAt || 0, where:'idb' };
+  } catch(e){}
+  return ls;
+}
+async function shellText(){
+  try { const h = localStorage.getItem(SHELL_KEY); if (h) return h; } catch(e){}
+  try { const r = await _locGet(SHELL_REC); if (r && r.html) return r.html; } catch(e){}
+  return null;
 }
 
 // Fetch and store this page's own source. `force` ignores the once-a-day limit.
 async function saveShell(force){
   if (localOn() || _shellBusy) return false;
-  const cur = shellInfo();
-  if (cur.noStore){
-    _shellErr = 'This launcher has no storage of its own, so N3ptune Local cannot keep a copy here.';
-    console.warn('[N3ptune] ' + _shellErr);
-    return false;
-  }
+  const cur = await shellInfoAsync();
   if (!force && cur.saved && Date.now() - cur.at < SHELL_TTL) return false;
   _shellBusy = true; _shellErr = '';
   try {
@@ -6835,10 +6940,12 @@ async function saveShell(force){
     // marker are both checked.
     if (txt.length < SHELL_MIN || txt.indexOf('id="keyGate"') < 0)
       throw new Error('that was not the app (' + txt.length + ' bytes)');
-    localStorage.setItem(SHELL_KEY, txt);
-    localStorage.setItem(SHELL_AT, String(Date.now()));
+    const where = await _shellPut(txt);
+    if (!where) throw new Error('this browser refused to store it (no IndexedDB and no localStorage)');
+    _shellWhere = where;
+    _shellMem = { saved:true, size:txt.length, at:Date.now(), where };
     console.log('[N3ptune] N3ptune Local: stored the app itself (' + _fmtBytes(txt.length)
-      + '). It can now start with no network.');
+      + ') in ' + where + '. It can now start with no network.');
     _n3corner('\u2705 N3ptune Local downloaded!', '#4ade80', 4000);
     renderLocalSettings().catch(()=>{});
     renderLocalInfo();
@@ -6933,10 +7040,13 @@ function renderLocalInfo(){
         + 'Nothing gets sent out while it is running.'
         + (n ? ' You have <b>' + n + '</b> game' + (n === 1 ? '' : 's') + ' ready to go.' : '')
         + (sh.saved ? '' : ' N3ptune is saving a copy of itself now so it can start without us.');
+      shellInfoAsync().then(a => { if (a.saved && !sh.saved) renderLocalInfo(); }).catch(()=>{});
     }
   }
   const note = document.getElementById('llocNote');
-  if (note){
+  if (note && activeGame && !_locCanSave(findByKey(activeGame.key))){
+    note.textContent = _locWhyNoSave(findByKey(activeGame.key));
+  } else if (note){
     note.textContent = live
       ? 'Playing from your device. N3ptune Local is on, so nothing is being downloaded or sent out.'
       : 'Want this game even with no internet? The "Download for Local" button up top lights up once the '
